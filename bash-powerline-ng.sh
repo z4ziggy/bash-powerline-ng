@@ -9,8 +9,6 @@ __powerline() {
     tty -s || return
 
     # Colors
-    FG_BLACK='\[\033[0;30m\]'
-    FG_GREEN='\[\033[0;32m\]'
     FG_YELLOW='\[\033[33m\]'
     FG_RED='\[\033[0;31m\]'
     FG_DARKRED='\[\e[38;5;52m\]'
@@ -35,9 +33,6 @@ __powerline() {
     COLOR_FAILURE=${COLOR_FAILURE:-'\[\033[0;31m\]'} # red
 
     # Symbols
-    SYMBOL_CAT=🐈
-    SYMBOL_DOG=🐕
-
     if [[ $TERM == linux ]]; then
         SYMBOL_GIT_BRANCH=${SYMBOL_GIT_BRANCH:-+}
         SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
@@ -52,28 +47,24 @@ __powerline() {
     SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
     SYMBOL_GIT_PUSH=${SYMBOL_GIT_PUSH:-⇡}
     SYMBOL_GIT_PULL=${SYMBOL_GIT_PULL:-⇣}
-    SYMBOL_NET_PATH=${SYMBOL_NET_PATH:-🖧 }
-    SYMBOL_HOME_PATH=${SYMBOL_HOME_PATH:-🏠}
+    SYMBOL_HOME_PATH=${SYMBOL_HOME_PATH:-🏠} # 🐈🐕★
     SYMBOL_ROOT_PATH=${SYMBOL_ROOT_PATH:-🖴 }
-    SYMBOL_PART_NEXT=${SYMBOL_PART_NEXT:-🭬} # 
-    SYMBOL_PATH_NEXT=${SYMBOL_PATH_NEXT:-⟩} # ❭〉 ⟩
+    SYMBOL_PART_NEXT=${SYMBOL_PART_NEXT:-🭬}
+    SYMBOL_PATH_NEXT=${SYMBOL_PATH_NEXT:-⟩}
     SYMBOL_ERROR=${SYMBOL_ERROR:-💥}
 
-    # detect SSH connection (TODO: detect nfs mount)
-    #if [[ ! -z $SSH_CONNECTION ]]; then
-    if [[ `who am i` =~ \([0-9\.]+\)$ ]]; then
-        SYMBOL_HOME_PATH=$SYMBOL_NET_PATH
-        SYMBOL_ROOT_PATH=$SYMBOL_NET_PATH
-    fi
-
-    # celebrate international cat & dog days
-    local DATE=`date +%m%d`
-    [ "$DATE" -eq "0826" ] && SYMBOL_HOME_PATH=$SYMBOL_DOG
-    [ "$DATE" -eq "0808" ] && SYMBOL_HOME_PATH=$SYMBOL_CAT
+#    if [[ -z "$PS_SYMBOL" ]]; then
+#      case "$(uname)" in
+#          Darwin)   PS_SYMBOL='';;
+#          Linux)    PS_SYMBOL='$';; 🐧
+#          *)        PS_SYMBOL='%';; 🗗
+#      esac
+#    fi
 
     __git_info() {
         [[ $POWERLINE_GIT = 0 ]] && return # disabled
         #hash git 2>/dev/null || return # git not found
+        #[ -d .git ] || return
         local git_eng="env LANG=C git"   # force git output in English to make our work easier
 
         # get current branch name
@@ -111,43 +102,37 @@ __powerline() {
     ps1() {
         local RESULT=${?##0}
 
-        local PATH_FG=${FG_LIGHTWHITE}
-        local PATH_BG=${BG_GREY}
-        local USER_FG=${FG_BLUE}
-        local PART_FG=${FG_GREY}
-
-        # Check if PWD is writable and set color accordingly
-        if [ ! -w $PWD ]; then
-            PATH_FG=${FG_DARKRED}
-            USER_FG=${FG_DARKRED}
-        fi
-
         # Check for root
         if [[ $EUID -eq 0 ]]; then
-            USER_FG=${FG_LIGHTWITE}
-            PATH_BG=${BG_RED}
-            PART_FG=${FG_RED}
-        fi
-
-        # Parse path
-        local WD
-        if [[ -z $SSH_CONNECTION ]] && [[ "$PWD" == ${HOME}* ]]; then
-            WD=${PWD/$HOME/${USER_FG}${SYMBOL_HOME_PATH}}
-            WD=${WD//\// ${FG_DARKGREY}${SYMBOL_PATH_NEXT}${PATH_FG} }
+                PS1="${BOLD}${FG_WHITE}${BG_RED} \u ${FG_RED}"
         else
-            [[ "$PWD" != "/" ]] && WD=${PWD//\// ${FG_DARKGREY}${SYMBOL_PATH_NEXT}${PATH_FG} }
-            WD=${USER_FG}${SYMBOL_ROOT_PATH}${WD}
+                PS1="${BOLD}${FG_WHITE}${BG_BLUE} \u ${FG_BLUE}"
         fi
 
         # Get git info
         local GIT_INFO=$(__git_info)
+        PS1+="${GIT_INFO:+${BG_DARKGREY}${SYMBOL_PART_NEXT}${COLOR_RESET}${FG_LIGHTWHITE}${BG_DARKGREY}${GIT_INFO} ${FG_DARKGREY}}"
+        PS1+="${BG_GREY}${SYMBOL_PART_NEXT}${COLOR_RESET}"
 
-        # Add working directory & symbol (net/home/root)
-        PS1="${PATH_FG}${PATH_BG} ${WD} ${COLOR_RESET}${PART_FG}"
-        # Expand git info
-        PS1+="${GIT_INFO:+${BG_DARKGREY}${SYMBOL_PART_NEXT}${COLOR_RESET}${FG_GREEN}${BG_DARKGREY}${GIT_INFO} ${COLOR_RESET}${FG_DARKGREY}}"
-        # Expand exit code of the previous command
-        PS1+="${RESULT:+${BG_DARKRED}${SYMBOL_PART_NEXT}${FG_LIGHTWHITE}${RESULT} ${COLOR_RESET}${FG_DARKRED}}"
+        # Check if PWD is writable and set color accordingly
+        local PATH_COLOR=${FG_LIGHTWHITE}
+        [ -w $PWD ] || PATH_COLOR=${FG_DARKRED}
+
+        # Parse path
+        local WD
+        if [[ "$PWD" == ${HOME}* ]]; then
+            WD=${PWD/$HOME/${SYMBOL_HOME_PATH}$BOLD}
+            WD=${WD//\// ${FG_DARKGREY}${SYMBOL_PATH_NEXT}${PATH_COLOR} }
+        else
+            WD=${PWD//\// ${FG_DARKGREY}${SYMBOL_PATH_NEXT}${PATH_COLOR} }
+            WD=${SYMBOL_ROOT_PATH}$BOLD${WD}
+        fi
+        PS1+="${PATH_COLOR}${BG_GREY}${WD} ${COLOR_RESET}${FG_GREY}"
+
+        # Expand exit code of the previous command and display different
+        # colors in the prompt accordingly.
+        PS1+="${RESULT:+${BG_DARKRED}${SYMBOL_PART_NEXT}${FG_WHITE}${RESULT} ${COLOR_RESET}${FG_DARKRED}}"
+
         # Finalize PS1
         PS1+="${SYMBOL_PART_NEXT}${COLOR_RESET}"
     }
