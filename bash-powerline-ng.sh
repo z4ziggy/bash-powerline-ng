@@ -102,7 +102,7 @@ __powerline() {
                 break
             fi
         done < <($git_eng status --porcelain --branch -uno 2>/dev/null)  # note the space between the two <
-        [ -z $marks ] || ref="$FG_YELLOW$ref"
+        [[ -z $marks ]] || ref="$FG_YELLOW$ref"
 
         # print the git branch segment without a trailing newline
         printf " $ref$marks"
