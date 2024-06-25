@@ -22,17 +22,17 @@ declare -A __powerline_themes=(
 )
 
 # list of colors (color names separated by space ' ')
-# format =       default      successs       warn           fail          hostname      folder_icon     path            crumbs          git             path:r
+# format =       default      successs       warn           fail          hostname      folder_icon     path            crumbs          git
 declare -A __powerline_colors=(
-      [default]="LightGrey    SpringGreen3   tan3           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22          DarkRed"
-    [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3           grey37"
-#      [dracula]="grey25       SeaGreen3      DarkOrange3    red3          DeepPink3     gold3           SeaGreen3       SkyBlue3        SlateBlue3      DarkRed"
-      [gruvbox]="yellow3      DarkOliveGreen gold4          red1          red4          gold1           SlateBlue3      SlateBlue1      cyan3           DarkRed"
-         [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2        DarkRed"
-#      [monokai]="SlateBlue3   Chartreuse2    DarkGoldenrod3 red3          DarkRed       DarkSeaGreen3   DarkCyan        SlateBlue3      grey37          DarkRed"
-        [ocean]="RoyalBlue4   DodgerGreen1   chocolate4     red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4      DarkRed"
-       [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4 DarkRed"
-       [sunset]="brown4       OrangeRed3     grey32         firebrick1    coral3        red3            goldenrod3      orange2         LightGoldenrod3 DarkRed"
+      [default]="LightGrey    SpringGreen3   tan3           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22         "
+    [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3          "
+#      [dracula]="grey25       SeaGreen3      DarkOrange3    red3          DeepPink3     gold3           SeaGreen3       SkyBlue3        SlateBlue3    "
+      [gruvbox]="yellow3      DarkOliveGreen gold4          red1          red4          gold1           SlateBlue3      SlateBlue1      cyan3          "
+         [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2       "
+#      [monokai]="SlateBlue3   Chartreuse2    DarkGoldenrod3 red3          DarkRed       DarkSeaGreen3   DarkCyan        SlateBlue3      grey37        "
+        [ocean]="RoyalBlue4   DodgerGreen1   chocolate4     red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4     "
+       [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4"
+       [sunset]="brown4       OrangeRed3     grey32         firebrick1    coral3        red3            goldenrod3      orange2         LightGoldenrod3"
 )
 
 # desc:   setup PS1 with fancy prompt
@@ -113,18 +113,11 @@ pl_colors() {
          color_bg_host=$(pl_rgb_bg ${colors[4]})
             color_icon=$(pl_rgb    ${colors[5]})
          color_bg_icon=$(pl_rgb_bg ${colors[5]})
+         color_bg_path=$(pl_rgb_bg ${colors[6]})
+            color_path=$(pl_rgb    ${colors[6]})
            color_crumb=$(pl_rgb    ${colors[7]})
              color_git=$(pl_rgb    ${colors[8]})
           color_bg_git=$(pl_rgb_bg ${colors[8]})
-
-    # setup colors according to user or root
-    if [[ ${EUID} -ne 0 ]]; then
-         color_bg_path=$(pl_rgb_bg ${colors[6]})
-            color_path=$(pl_rgb    ${colors[6]})
-    else
-         color_bg_path=$(pl_rgb_bg ${colors[9]})
-            color_path=$(pl_rgb    ${colors[9]})
-    fi
 
     unset colors
     PL_COLORS=$1

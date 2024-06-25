@@ -16,7 +16,6 @@ Forked from [bash-powerline](https://github.com/riobard/bash-powerline)
 * Colored error for the previously failed command
 * Local/Network symbols for path visualization
 * Folder symbol's color reflects write permissions for user
-* Color differentiation for user/root
 
 
 ## Installation
