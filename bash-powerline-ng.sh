@@ -97,7 +97,7 @@ pl_colors() {
         for line in "${rgb[@]}"; do
             if [[ $line =~ $1 ]]; then
                 read r g b _ <<< $line
-                echo -en "\e[38;2;${r};${g};${b}m"
+                echo -en "\001\e[38;2;${r};${g};${b}m\002"
                 return
             fi
         done
@@ -110,7 +110,7 @@ pl_colors() {
         for line in "${rgb[@]}"; do
             if [[ $line =~ $1 ]]; then
                 read r g b _ <<< $line
-                echo -en "\e[48;2;${r};${g};${b}m"
+                echo -en "\001\e[48;2;${r};${g};${b}m\002"
                 return
             fi
         done
