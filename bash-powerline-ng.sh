@@ -90,7 +90,7 @@ pl_theme() {
 # output: color_ variables propagated
 pl_colors() {
 
-    # desc:   retrieve rgb color (by name) from showrgb and set terminal color
+    # desc:   retrieve rgb color (by name) from rgb array and set terminal color
     # input:  $1 = color name (eg, "blue") (case sensative)
     # output: escape code with corresponding rgb values
     __rgb() {
@@ -103,7 +103,7 @@ pl_colors() {
         done
     }
 
-    # desc:   retrieve rgb color (by name) from showrgb and set terminal bg color
+    # desc:   retrieve rgb color (by name) from rgb array and set terminal bg color
     # input:  $1 = bg color name (eg, "DarkGrey") (case sensative)
     # output: escape code with corresponding rgb values
     __rgb_bg() {
@@ -116,7 +116,10 @@ pl_colors() {
         done
     }
 
+    # fill rgb array with colors from showrgb
     IFS=$'\n' read -d -r -a rgb <<< $(showrgb)
+
+    # read powerline color themes
     read -a colors <<< ${__powerline_colors[$1]}
 
          color_default=$(__rgb    ${colors[0]})
