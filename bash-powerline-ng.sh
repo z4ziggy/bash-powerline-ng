@@ -4,7 +4,7 @@
 ## command, or export it if/when needed.
 #POWERLINE_GIT=${POWERLINE_GIT:-0}                       # disable git parsing
 #POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-0}                 # disable crumbs in path names
-POWERLINE_HOST=${POWERLINE_HOST:-0}                      # disable hostname display
+#POWERLINE_HOST=${POWERLINE_HOST:-0}                      # disable hostname display
 
 ## Settings can be overidden from user env or here
 PL_THEME=${PL_THEME:-default}       # default theme
@@ -55,19 +55,6 @@ __powerline() {
     PROMPT_COMMAND="ps1"
 }
 
-# desc:   retrieve rgb color (by name) from showrgb and set terminal color
-# input:  $1 = color name (eg, "blue") (case sensative)
-# output: escape code with corresponding rgb values
-pl_rgb() {
-    (set $(showrgb|grep $'\t'"${1}$"||echo 0); echo -en "\001\e[38;2;$1;$2;$3m\002")
-}
-
-# desc:   retrieve rgb color (by name) from showrgb and set terminal bg color
-# input:  $1 = bg color name (eg, "DarkGrey") (case sensative)
-# output: escape code with corresponding rgb values
-pl_rgb_bg() {
-    (set $(showrgb|grep $'\t'"${1}$"||echo 0); echo -en "\001\e[48;2;$1;$2;$3m\002")
-}
 
 # desc:   setup symbol variables from selected theme
 # input:  $1 = string containing theme symbols separated by pipe '|'
@@ -102,24 +89,52 @@ pl_theme() {
 #              (eg. "color1 color2 color3")
 # output: color_ variables propagated
 pl_colors() {
+
+    # desc:   retrieve rgb color (by name) from showrgb and set terminal color
+    # input:  $1 = color name (eg, "blue") (case sensative)
+    # output: escape code with corresponding rgb values
+    __rgb() {
+        for line in "${rgb[@]}"; do
+            if [[ $line =~ $1 ]]; then
+                read r g b _ <<< $line
+                echo -en "\e[38;2;${r};${g};${b}m"
+                return
+            fi
+        done
+    }
+
+    # desc:   retrieve rgb color (by name) from showrgb and set terminal bg color
+    # input:  $1 = bg color name (eg, "DarkGrey") (case sensative)
+    # output: escape code with corresponding rgb values
+    __rgb_bg() {
+        for line in "${rgb[@]}"; do
+            if [[ $line =~ $1 ]]; then
+                read r g b _ <<< $line
+                echo -en "\e[48;2;${r};${g};${b}m"
+                return
+            fi
+        done
+    }
+
+    IFS=$'\n' read -d -r -a rgb <<< $(showrgb)
     read -a colors <<< ${__powerline_colors[$1]}
 
-         color_default=$(pl_rgb    ${colors[0]})
-         color_success=$(pl_rgb    ${colors[1]})
-         color_warning=$(pl_rgb    ${colors[2]})
-         color_failure=$(pl_rgb    ${colors[3]})
-       color_bg_result=$(pl_rgb_bg ${colors[3]})
-            color_host=$(pl_rgb    ${colors[4]})
-         color_bg_host=$(pl_rgb_bg ${colors[4]})
-            color_icon=$(pl_rgb    ${colors[5]})
-         color_bg_icon=$(pl_rgb_bg ${colors[5]})
-         color_bg_path=$(pl_rgb_bg ${colors[6]})
-            color_path=$(pl_rgb    ${colors[6]})
-           color_crumb=$(pl_rgb    ${colors[7]})
-             color_git=$(pl_rgb    ${colors[8]})
-          color_bg_git=$(pl_rgb_bg ${colors[8]})
+         color_default=$(__rgb    ${colors[0]})
+         color_success=$(__rgb    ${colors[1]})
+         color_warning=$(__rgb    ${colors[2]})
+         color_failure=$(__rgb    ${colors[3]})
+      color_bg_failure=$(__rgb_bg ${colors[3]})
+            color_host=$(__rgb    ${colors[4]})
+         color_bg_host=$(__rgb_bg ${colors[4]})
+            color_icon=$(__rgb    ${colors[5]})
+         color_bg_icon=$(__rgb_bg ${colors[5]})
+         color_bg_path=$(__rgb_bg ${colors[6]})
+            color_path=$(__rgb    ${colors[6]})
+           color_crumb=$(__rgb    ${colors[7]})
+             color_git=$(__rgb    ${colors[8]})
+          color_bg_git=$(__rgb_bg ${colors[8]})
 
-    unset colors
+    unset colors rgb
     PL_COLORS=$1
 }
 
@@ -230,7 +245,7 @@ ps1() {
 "${color_reset}${color_git}}"
 
     # Expand last command result (FIXME: show only once)
-    PS1+="${last_cmd_result:+${color_bg_result}${symbol_part_next} "\
+    PS1+="${last_cmd_result:+${color_bg_failure}${symbol_part_next} "\
 "${color_default}${last_cmd_result} ${color_reset}${color_failure}}"
 
     # Finalize PS1
