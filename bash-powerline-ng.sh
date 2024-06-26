@@ -161,15 +161,15 @@ __git_info() {
     # get current branch name
     local ref=$(${git_eng} symbolic-ref --short HEAD 2>/dev/null)
 
-    if [[ -n "${ref}" ]]; then
-        # prepend branch symbol
-        ref="${symbol_git_branch} ${ref}"
-    else
+    if [[ ! -n "${ref}" ]]; then
         # get tag name or short unique hash
         ref=$(${git_eng} describe --tags --always 2>/dev/null)
     fi
 
     [[ -n "${ref}" ]] || return  # not a git repo
+
+    # prepend branch symbol
+    ref="${symbol_git_branch} ${ref}"
 
     local marks
 
