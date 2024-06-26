@@ -55,7 +55,6 @@ __powerline() {
     PROMPT_COMMAND="ps1"
 }
 
-
 # desc:   setup symbol variables from selected theme
 # input:  $1 = string containing theme symbols separated by pipe '|'
 #              (eg, " |🖧 | | | | ")
@@ -104,7 +103,7 @@ pl_colors() {
     fi
     done < <(showrgb)
 
-    # read powerline color themes
+    # read powerline color theme
     read -a colors <<< ${__powerline_colors[$1]}
 
          color_default=$(__rgb    ${colors[0]})
@@ -134,11 +133,10 @@ __git_info() {
 
     # check for .git directory in parent dirs (it's faster than running git)
     local dir=$PWD
-    while [[ -n "$dir" ]]; do
-        [[ -d $dir/.git ]] && break
+    while [[ -n "$dir" && ! -d $dir/.git ]]; do
         dir="${dir%/*}"
     done
-    [[ ! -n $dir ]] && [[ ! -d /.git ]] && return
+    [[ -z $dir && ! -d /.git ]] && return
 
     # check if 'git' command exists
     #command git 2>/dev/null || return # git not found
@@ -185,7 +183,7 @@ __git_info() {
 }
 
 ps1() {
-    # remeber last command result
+    # remeber last command result (make it blank if zero)
     local last_cmd_result=${?##0}
 
     # Get git info
@@ -215,13 +213,14 @@ ps1() {
         fi
     fi
 
-    # Add system info if exists
     if [[ ${POWERLINE_HOST} = 0 ]]; then
-        # Add local/remote symbol
+        # Add part_start & folder symbols
         PS1="${color_path}${symbol_part_start}${color_bg_path} ${folder_prefix}"
     else
+        # Add part_start & system symbols + hostname
         PS1="${color_host}${symbol_part_start}${color_bg_host} ${color_default}"\
 "${system_symbol} ${host_name} ${color_bg_path}"
+        # Add part_next & folder symbols
         PS1+="${color_host}${symbol_part_next}${color_bg_path} ${folder_prefix}"
     fi
 
