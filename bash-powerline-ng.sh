@@ -90,34 +90,19 @@ pl_theme() {
 # output: color_ variables propagated
 pl_colors() {
 
-    # desc:   retrieve rgb color (by name) from rgb array and set terminal color
-    # input:  $1 = color name (eg, "blue") (case sensative)
-    # output: escape code with corresponding rgb values
-    __rgb() {
-        for line in "${rgb[@]}"; do
-            if [[ $line =~ $1 ]]; then
-                read r g b _ <<< $line
-                echo -en "\001\e[38;2;${r};${g};${b}m\002"
-                return
-            fi
-        done
-    }
-
-    # desc:   retrieve rgb color (by name) from rgb array and set terminal bg color
-    # input:  $1 = bg color name (eg, "DarkGrey") (case sensative)
-    # output: escape code with corresponding rgb values
-    __rgb_bg() {
-        for line in "${rgb[@]}"; do
-            if [[ $line =~ $1 ]]; then
-                read r g b _ <<< $line
-                echo -en "\001\e[48;2;${r};${g};${b}m\002"
-                return
-            fi
-        done
-    }
+    declare -A rgb
+    __rgb()    { echo -en "\001\e[38;2;${rgb[$1]}m\002"; }
+    __rgb_bg() { echo -en "\001\e[48;2;${rgb[$1]}m\002"; }
 
     # fill rgb array with colors from showrgb
-    IFS=$'\n' read -d -r -a rgb <<< $(showrgb)
+    while IFS= read -r line; do
+    # Using regex to capture the RGB values and the color name
+    if [[ $line =~ ([0-9]+)[[:space:]]+([0-9]+)[[:space:]]+([0-9]+)[[:space:]]+(.*) ]]; then
+        color_name="${BASH_REMATCH[4]}"
+        rgb_values="${BASH_REMATCH[1]};${BASH_REMATCH[2]};${BASH_REMATCH[3]}"
+        rgb["$color_name"]="$rgb_values"
+    fi
+    done < <(showrgb)
 
     # read powerline color themes
     read -a colors <<< ${__powerline_colors[$1]}
