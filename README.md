@@ -5,7 +5,7 @@ Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 Forked from [bash-powerline](https://github.com/riobard/bash-powerline)
 
 
-![bash-powerline-ng](https://raw.github.com/z4ziggy/bash-powerline-ng/master/screenshots/terminal1.png)
+![bash-powerline-ng](https://raw.github.com/z4ziggy/bash-powerline-ng/master/screenshots/terminal.png)
 
 ## Features
 
