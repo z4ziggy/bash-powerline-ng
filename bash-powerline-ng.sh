@@ -94,13 +94,9 @@ pl_colors() {
     __rgb_bg() { echo -en "\001\e[48;2;${rgb[$1]}m\002"; }
 
     # fill rgb array with colors from showrgb
-    while IFS= read -r line; do
-    # Using regex to capture the RGB values and the color name
-    if [[ $line =~ ([0-9]+)[[:space:]]+([0-9]+)[[:space:]]+([0-9]+)[[:space:]]+(.*) ]]; then
-        color_name="${BASH_REMATCH[4]}"
-        rgb_values="${BASH_REMATCH[1]};${BASH_REMATCH[2]};${BASH_REMATCH[3]}"
-        rgb["$color_name"]="$rgb_values"
-    fi
+    while read -r r g b color_name extra; do
+        color_name+=${extra:+ ${extra}}
+        rgb["$color_name"]="$r;$g;$b"
     done < <(showrgb)
 
     # read powerline color theme
