@@ -4,7 +4,7 @@
 # Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 #
 # Sources should be easy enough to change and adopt to your liking - it's one
-# file with less than 300 lines of code, modestly commentented.
+# file with less than 300 lines of code, modestly commented.
 
 #  ┏┓┏┓┏┳┓┳┏┓┳┓┏┓
 #  ┃┃┃┃ ┃ ┃┃┃┃┃┗┓

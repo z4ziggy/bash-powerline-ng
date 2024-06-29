@@ -11,7 +11,7 @@ Forked from [bash-powerline](https://github.com/riobard/bash-powerline)
 
 * Fast execution
 * Git branch: display branch symbol and current git branch name, or short SHA1 hash when the head is detached
-* Git branch: foreground color reflects uncommited changes
+* Git branch: foreground color reflects uncommitted changes
 * Git branch: display "⇡" or "⇣" symbols plus the difference in the number of commits when the current branch is ahead or behind of remote (see screenshot)
 * Colored error for the previously failed command
 * Local/Network symbols for path visualization
@@ -33,7 +33,7 @@ To use a different theme, colors, or setting, override the variable before the `
     POWERLINE_THEME=slant source ~/.bash-powerline-ng.sh
 
 
-Sources should be easy enough to change and adopt to your liking - it's one file with less than 300 lines of code, modestly commentented.
+Sources should be easy enough to change and adapt to your liking - it's one file with less than 300 lines of code, modestly commented.
 
 
 ## Why
