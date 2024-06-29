@@ -16,7 +16,7 @@
 #POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-0}                # disable crumbs in path names
 #POWERLINE_HOST=${POWERLINE_HOST:-0}                    # disable hostname display
 
-## Settings can be overidden from user env or here
+## Settings can be overridden from user env or here
 POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
 POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 
@@ -192,7 +192,7 @@ __git_info() {
 }
 
 ps1() {
-    # remeber last command result (make it blank if zero)
+    # remember last command result (make it blank if zero)
     local last_cmd_result=${?##0}
 
     # Get git info
@@ -226,7 +226,7 @@ ps1() {
     # Add part_start symbol and host_info if any
     PS1="${start_color}${symbol_part_start}${host_info}"
 
-    # Add folder symbol + Wordking directory
+    # Add folder symbol + Working directory
     PS1+="${color_bg_path} ${folder_color}${symbol_folder}${color_default} "\
 "${wd} ${color_reset}${color_path}"
 
