@@ -30,7 +30,7 @@ And source it in your `.bashrc`
 
 To use a different theme, colors, or setting, override the variable before the `source` cmd. eg:
 
-    PL_THEME=slant source ~/.bash-powerline-ng.sh
+    POWERLINE_THEME=slant source ~/.bash-powerline-ng.sh
 
 
 Sources should be easy enough to change and adopt to your liking - it's one file with less than 300 lines of code, modestly commentented.

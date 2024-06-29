@@ -1,27 +1,37 @@
 #!/usr/bin/bash
 
+# bash-powerline-ng (c) z4ziggy 2014-2024
+# Minimalist, lightweight, usable and themable Powerline in pure Bash script.
+#
+# Sources should be easy enough to change and adopt to your liking - it's one
+# file with less than 300 lines of code, modestly commentented.
+
+#  ┏┓┏┓┏┳┓┳┏┓┳┓┏┓
+#  ┃┃┃┃ ┃ ┃┃┃┃┃┗┓
+#  ┗┛┣┛ ┻ ┻┗┛┛┗┗┛
+
 ## To disable functionality, either uncomment, or pass the var on the `source`
 ## command, or export it if/when needed.
-#POWERLINE_GIT=${POWERLINE_GIT:-0}                       # disable git parsing
-#POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-0}                 # disable crumbs in path names
-#POWERLINE_HOST=${POWERLINE_HOST:-0}                      # disable hostname display
+#POWERLINE_GIT=${POWERLINE_GIT:-0}                      # disable git parsing
+#POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-0}                # disable crumbs in path names
+#POWERLINE_HOST=${POWERLINE_HOST:-0}                    # disable hostname display
 
 ## Settings can be overidden from user env or here
-PL_THEME=${PL_THEME:-default}       # default theme
-PL_COLORS=${PL_COLORS:-default}     # default color scheme
+POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
+POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 
 # list of themes and their symbols (separated by pipe '|') (spaces included).
 # format = HOST | NETWORK | FOLDER | CRUMB | PART_START | PART_NEXT | PART_END
 declare -A __powerline_themes=(
-    [default]=" |🖧 | |||| "
-      [arrow]=" |🖧 | |||| "
+    [default]=" |🖧 | |  ||| "
+      [arrow]=" |🖧 | |  ||| "
       [slant]="💻︎|🖧 | | | | |  "
        [diag]="💻︎|🖧 | | | | |  "
-       [soft]=" |🖧 | |⟩|🭬|🭬|🭬"
-      [round]=" |🖧 | || || "
+       [soft]=" |🖧 | | ⟩ |🭬|🭬|🭬"
+      [round]=" |🖧 | |  | || "
 )
 
-# list of colors (color names separated by space ' ')
+# list of color schemes and their colors (color names separated by space ' ')
 # format =       default      successs       warn           fail          hostname      folder_icon     path            crumbs          git
 declare -A __powerline_colors=(
       [default]="LightGrey    SpringGreen3   tan3           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22         "
@@ -49,15 +59,15 @@ __powerline() {
 
     host_name=$(hostname)
 
-    pl_colors ${PL_COLORS}
-    pl_theme ${PL_THEME}
+    pl_colors ${POWERLINE_COLORS}
+    pl_theme ${POWERLINE_THEME}
 
     PROMPT_COMMAND="ps1"
 }
 
 # desc:   setup symbol variables from selected theme
 # input:  $1 = string containing theme symbols separated by pipe '|'
-#              (eg, " |🖧 | | | | ")
+#              (eg, " |🖧 |  | | | ")
 # output: symbol_ variables propagated
 pl_theme() {
     IFS='|' read -r       \
@@ -80,7 +90,9 @@ pl_theme() {
     if [[ "$symbol_part_end" =~ "$symbol_part_start" ]]; then
         symbol_part_start=${color_invert}${symbol_part_start}${color_reset}
     fi
-    PL_THEME=$1
+
+    crumb_symbol=${color_crumb}${symbol_crumb}${color_default}
+    POWERLINE_THEME=$1
 }
 
 # desc:   setup colors from selected color scheme
@@ -96,29 +108,30 @@ pl_colors() {
     # fill rgb array with colors from showrgb
     while read -r r g b color_name extra; do
         color_name+=${extra:+ ${extra}}
-        rgb["$color_name"]="$r;$g;$b"
+        rgb["${color_name}"]="$r;$g;$b"
     done < <(showrgb)
 
     # read powerline color theme
     read -a colors <<< ${__powerline_colors[$1]}
 
-         color_default=$(__rgb    ${colors[0]})
-         color_success=$(__rgb    ${colors[1]})
-         color_warning=$(__rgb    ${colors[2]})
-         color_failure=$(__rgb    ${colors[3]})
-      color_bg_failure=$(__rgb_bg ${colors[3]})
-            color_host=$(__rgb    ${colors[4]})
-         color_bg_host=$(__rgb_bg ${colors[4]})
-            color_icon=$(__rgb    ${colors[5]})
-         color_bg_icon=$(__rgb_bg ${colors[5]})
-         color_bg_path=$(__rgb_bg ${colors[6]})
-            color_path=$(__rgb    ${colors[6]})
-           color_crumb=$(__rgb    ${colors[7]})
-             color_git=$(__rgb    ${colors[8]})
-          color_bg_git=$(__rgb_bg ${colors[8]})
+       color_default=$(__rgb    ${colors[0]})
+       color_success=$(__rgb    ${colors[1]})
+       color_warning=$(__rgb    ${colors[2]})
+       color_failure=$(__rgb    ${colors[3]})
+    color_bg_failure=$(__rgb_bg ${colors[3]})
+          color_host=$(__rgb    ${colors[4]})
+       color_bg_host=$(__rgb_bg ${colors[4]})
+          color_icon=$(__rgb    ${colors[5]})
+       color_bg_icon=$(__rgb_bg ${colors[5]})
+       color_bg_path=$(__rgb_bg ${colors[6]})
+          color_path=$(__rgb    ${colors[6]})
+         color_crumb=$(__rgb    ${colors[7]})
+           color_git=$(__rgb    ${colors[8]})
+        color_bg_git=$(__rgb_bg ${colors[8]})
 
     unset colors rgb
-    PL_COLORS=$1
+    crumb_symbol=${color_crumb}${symbol_crumb}${color_default}
+    POWERLINE_COLORS=$1
 }
 
 # desc:   populate git_info if git info found
@@ -185,43 +198,37 @@ ps1() {
     # Get git info
     local git_info=$(__git_info)
 
-    local crumb=${color_crumb}${symbol_crumb}${color_default}
-
-    local wd folder_prefix
-    # Check if PWD is writable and set color accordingly
-    if [[ -w ${PWD} ]]; then
-        folder_prefix=${color_icon}${symbol_folder}
-    else
-        folder_prefix=${color_failure}${symbol_folder}
-    fi
+    local folder_color
+    # Check if PWD is writable and set folder color accordingly
+    [[ -w ${PWD} ]] && folder_color="${color_icon}" || folder_color="${color_failure}"
 
     # Parse path
-    if [[ "${PWD}" == ${HOME}* ]]; then
-        # replace occurrences of $HOME in $PWD with ~
-        wd="${PWD/${HOME}/\~}"
-        # make crumbs from path if needed
-        [[ ${POWERLINE_CRUMBS} = 0 ]] || wd="${wd//\// ${crumb} }"
-    else
-        wd="${PWD}"
-        if [[ "${PWD}" != "/" ]]; then
-            # make crumbs from path if needed
-            [[ ${POWERLINE_CRUMBS} = 0 ]] || wd="/${PWD//\// ${crumb} }"
-        fi
+    local wd="${PWD/#$HOME/\~}"
+    # make crumbs from path if needed
+    if [[ ! ${POWERLINE_CRUMBS} = 0 ]]; then
+        [[ "${wd}"     != "/" ]] && wd="${wd//\//${crumb_symbol}}"
+        [[ "${wd:0:1}" == " " ]] && wd="/${wd}"
     fi
 
-    if [[ ${POWERLINE_HOST} = 0 ]]; then
-        # Add part_start & folder symbols
-        PS1="${color_path}${symbol_part_start}${color_bg_path} ${folder_prefix}"
-    else
-        # Add part_start & system symbols + hostname
-        PS1="${color_host}${symbol_part_start}${color_bg_host} ${color_default}"\
-"${system_symbol} ${host_name} ${color_bg_path}"
-        # Add part_next & folder symbols
-        PS1+="${color_host}${symbol_part_next}${color_bg_path} ${folder_prefix}"
+    local host_info start_color=${color_path}
+    # setup host_info if needed
+    if [[ ! ${POWERLINE_HOST} = 0 ]]; then
+        start_color=${color_host}
+        # set host_info with part_start & system symbols + hostname + part_next
+        host_info="${color_bg_host} ${color_default}${system_symbol} "\
+"${host_name} ${color_bg_path}${color_host}${symbol_part_next}"
     fi
 
-    # Add Wordking directory
-    PS1+="${color_default} ${wd} ${color_reset}${color_path}"
+    #  ┏┓┏┓┓
+    #  ┃┃┗┓┃ Finally we are ready to start assembly our prompt
+    #  ┣┛┗┛┻
+
+    # Add part_start symbol and host_info if any
+    PS1="${start_color}${symbol_part_start}${host_info}"
+
+    # Add folder symbol + Wordking directory
+    PS1+="${color_bg_path} ${folder_color}${symbol_folder}${color_default} "\
+"${wd} ${color_reset}${color_path}"
 
     # Expand git info if we have any
     PS1+="${git_info:+${color_bg_git}${symbol_part_next}${git_info} "\
