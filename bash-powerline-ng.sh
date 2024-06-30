@@ -3,7 +3,7 @@
 # bash-powerline-ng (c) z4ziggy 2014-2024
 # Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 #
-# Sources should be easy enough to change and adopt to your liking - it's one
+# Source should be easy enough to change and adapt to your liking - it's one
 # file with less than 300 lines of code, modestly commented.
 
 #  ┏┓┏┓┏┳┓┳┏┓┳┓┏┓
@@ -57,8 +57,6 @@ __powerline() {
     color_reset='\001\e[0m\002'
     color_invert='\001\e[7m\002'
 
-    host_name=$(hostname)
-
     pl_colors ${POWERLINE_COLORS}
     pl_theme ${POWERLINE_THEME}
 
@@ -91,7 +89,7 @@ pl_theme() {
         symbol_part_start=${color_invert}${symbol_part_start}${color_reset}
     fi
 
-    crumb_symbol=${color_crumb}${symbol_crumb}${color_default}
+    crumb_symbol="${color_crumb}${symbol_crumb}${color_default}"
     POWERLINE_THEME=$1
 }
 
@@ -130,7 +128,7 @@ pl_colors() {
         color_bg_git=$(__rgb_bg ${colors[8]})
 
     unset colors rgb
-    crumb_symbol=${color_crumb}${symbol_crumb}${color_default}
+    crumb_symbol="${color_crumb}${symbol_crumb}${color_default}"
     POWERLINE_COLORS=$1
 }
 
@@ -198,16 +196,16 @@ ps1() {
     # Get git info
     local git_info=$(__git_info)
 
-    local folder_color
+    local folder_color=${color_icon}
     # Check if PWD is writable and set folder color accordingly
-    [[ -w ${PWD} ]] && folder_color="${color_icon}" || folder_color="${color_failure}"
+    [[ -w ${PWD} ]] || folder_color="${color_failure}"
 
     # Parse path
-    local wd="${PWD/#$HOME/\~}"
+    local wd="$(dirs)"
     # make crumbs from path if needed
     if [[ ! ${POWERLINE_CRUMBS} = 0 ]]; then
-        [[ "${wd}"     != "/" ]] && wd="${wd//\//${crumb_symbol}}"
-        [[ "${wd:0:1}" == " " ]] && wd="/${wd}"
+        [[ "${wd}" != "/"              ]] && wd="${wd//\//${crumb_symbol}}"
+        [[ "${wd}" == ${crumb_symbol}* ]] && wd="/${wd}"
     fi
 
     local host_info start_color=${color_path}
@@ -215,8 +213,8 @@ ps1() {
     if [[ ! ${POWERLINE_HOST} = 0 ]]; then
         start_color=${color_host}
         # set host_info with part_start & system symbols + hostname + part_next
-        host_info="${color_bg_host} ${color_default}${system_symbol} "\
-"${host_name} ${color_bg_path}${color_host}${symbol_part_next}"
+        host_info="${color_bg_host} ${color_default}${system_symbol} \h "\
+"${color_bg_path}${color_host}${symbol_part_next}"
     fi
 
     #  ┏┓┏┓┓
