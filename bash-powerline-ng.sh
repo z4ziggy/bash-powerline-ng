@@ -213,7 +213,7 @@ ps1() {
     if [[ ! ${POWERLINE_HOST} = 0 ]]; then
         start_color=${color_host}
         # set host_info with part_start & system symbols + hostname + part_next
-        host_info="${color_bg_host} ${color_default}${system_symbol} \h "\
+        host_info="${color_bg_host} ${color_default}${system_symbol} \H "\
 "${color_bg_path}${color_host}${symbol_part_next}"
     fi
 
