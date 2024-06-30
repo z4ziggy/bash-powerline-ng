@@ -135,9 +135,7 @@ pl_colors() {
 # desc:   populate git_info if git info found
 # output: git_info variable propagated
 __git_info() {
-    # check if git functionality is disabled
-    [[ ${POWERLINE_GIT} = 0 ]] && return
-
+    unset git_info
     # check for .git directory in parent dirs (it's faster than running git)
     local dir=$PWD
     while [[ -n "$dir" && ! -d $dir/.git ]]; do
@@ -186,22 +184,19 @@ __git_info() {
     [[ -z ${marks} ]] || ref="${color_warning}${ref}"
 
     # print the git branch segment without a trailing newline
-    printf " ${color_success}${ref}${marks}"
+    git_info=" ${color_success}${ref}${marks}"
 }
 
 ps1() {
     # remember last command result (make it blank if zero)
     local last_cmd_result=${?##0}
 
-    # Get git info
-    local git_info=$(__git_info)
-
     local folder_color=${color_icon}
     # Check if PWD is writable and set folder color accordingly
     [[ -w ${PWD} ]] || folder_color="${color_failure}"
 
     # Parse path
-    local wd="$(dirs)"
+    local wd="${PWD/#${HOME}/\~}"
     # make crumbs from path if needed
     if [[ ! ${POWERLINE_CRUMBS} = 0 ]]; then
         [[ "${wd}" != "/"              ]] && wd="${wd//\//${crumb_symbol}}"
@@ -216,6 +211,9 @@ ps1() {
         host_info="${color_bg_host} ${color_default}${system_symbol} \H "\
 "${color_bg_path}${color_host}${symbol_part_next}"
     fi
+
+    # setup git info if needed
+    [[ ${POWERLINE_GIT} = 0 ]] || __git_info
 
     #  ┏┓┏┓┓
     #  ┃┃┗┓┃ Finally we are ready to start assembly our prompt
