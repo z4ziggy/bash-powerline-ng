@@ -31,7 +31,7 @@ To use a different theme, colors, or setting, override the variable before the `
     POWERLINE_THEME=slant source ~/.bash-powerline-ng.sh
 
 
-Source should be easy enough to change and adapt to your liking - it's one file with less than 300 lines of code, modestly commented.
+Code should be easy enough to change and adapt to your liking - it's one source file with less than 300 lines of code, modestly commented.
 
 
 ## Why
