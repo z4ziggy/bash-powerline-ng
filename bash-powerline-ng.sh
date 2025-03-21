@@ -26,10 +26,10 @@ POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 declare -A pl_themes=(
     [default]=" |🖧 | |  ||| "
       [arrow]=" |🖧 | |  ||| "
-      [slant]="💻︎|🖧 | | | | |  "
-       [diag]="💻︎|🖧 | | | | |  "
+      [slant]="💻︎|🖧 | |  || | "
+       [diag]="💻︎|🖧 | |  || | "
        [soft]=" |🖧 | | ⟩ |🭬|🭬|🭬"
-      [round]=" |🖧 | |  | || "
+      [round]=" |🖧 | |  ||| "
 )
 
 # list of color schemes and their colors (color names separated by space ' ')
@@ -37,10 +37,10 @@ declare -A pl_themes=(
 declare -A pl_colors=(
       [default]="LightGrey    SpringGreen3   tan3           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22         "
     [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3          "
-#      [dracula]="grey25       SeaGreen3      DarkOrange3    red3          DeepPink3     gold3           SeaGreen3       SkyBlue3        SlateBlue3    "
+#     [dracula]="grey25       SeaGreen3      DarkOrange3    red3          DeepPink3     gold3           SeaGreen3       SkyBlue3        SlateBlue3     "
       [gruvbox]="yellow3      DarkOliveGreen gold4          red1          red4          gold1           SlateBlue3      SlateBlue1      cyan3          "
          [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2       "
-#      [monokai]="SlateBlue3   Chartreuse2    DarkGoldenrod3 red3          DarkRed       DarkSeaGreen3   DarkCyan        SlateBlue3      grey37        "
+#     [monokai]="SlateBlue3   Chartreuse2    DarkGoldenrod3 red3          DarkRed       DarkSeaGreen3   DarkCyan        SlateBlue3      grey37         "
         [ocean]="RoyalBlue4   DodgerGreen1   chocolate4     red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4     "
        [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4"
        [sunset]="brown4       OrangeRed3     grey32         firebrick1    coral3        red3            goldenrod3      orange2         LightGoldenrod3"
@@ -151,12 +151,11 @@ pl_git_info() {
     local git_eng="env LANG=C git"
 
     # get current branch name
-    local ref
-    IFS='/' read -r _ _ ref < $git_dir/.git/HEAD
-    #local ref=$(${git_eng} symbolic-ref --short HEAD 2>/dev/null)
+    local ref=$(${git_eng} symbolic-ref --short -q HEAD 2>/dev/null)
+    [[ -n "${ref}" ]] || ref=$(${git_eng} rev-parse --short HEAD)
 
     # get tag name or short unique hash
-    [[ -n "${ref}" ]] || ref=$(${git_eng} describe --tags --always 2>/dev/null)
+    #[[ -n "${ref}" ]] || ref=$(${git_eng} describe --tags --always 2>/dev/null)
     [[ -n "${ref}" ]] || return  # not a git repo
 
     # prepend branch symbol
@@ -218,9 +217,9 @@ pl_ps1() {
     # make crumbs from path if needed
     [[ ${POWERLINE_CRUMBS} = 0 ]] || pl_crumbs wd
     # setup host_info if needed
-    [[ ${POWERLINE_HOST} = 0   ]] || pl_host_info start_color host_info
+    [[ ${POWERLINE_HOST}   = 0 ]] || pl_host_info start_color host_info
     # setup git info if needed
-    [[ ${POWERLINE_GIT} = 0    ]] || pl_git_info git_info
+    [[ ${POWERLINE_GIT}    = 0 ]] || pl_git_info git_info
 
     #  ┏┓┏┓┓
     #  ┃┃┗┓┃ Finally we are ready to start assembly our prompt
@@ -243,6 +242,9 @@ pl_ps1() {
 
     # Finalize PS1
     PS1+="${pl_symbol_part_end}${pl_color_reset}"
+
+    # cleanup
+    unset git_info
 }
 
 # exit if there is no interactive terminal (commit by @prof7bit)
