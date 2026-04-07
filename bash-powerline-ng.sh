@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# bash-powerline-ng (c) z4ziggy 2014-2024
+# bash-powerline-ng (c) z4ziggy 2014-2026
 # Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 #
 # Code should be easy enough to change and adapt to your liking - it's one
@@ -10,14 +10,17 @@
 #  ┃┃┃┃ ┃ ┃┃┃┃┃┗┓
 #  ┗┛┣┛ ┻ ┻┗┛┛┗┗┛
 #
-# To change functionality, either uncomment, change, or pass the var on the
-# `source` command, or set it if/when needed.
-
-#POWERLINE_GIT=${POWERLINE_GIT:-0}                      # disable git parsing
-#POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-0}                # disable crumbs in path names
-#POWERLINE_HOST=${POWERLINE_HOST:-0}                    # disable hostname display
+# Set before sourcing, pass on the `source` cmdline, or set after (0=off, 1=on):
+POWERLINE_SPACE=${POWERLINE_SPACE:-1}                   # "crumb space" between fields
+POWERLINE_GIT=${POWERLINE_GIT:-1}                       # git parsing
+POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-1}                 # crumbs in path names
+#POWERLINE_HOST=${POWERLINE_HOST:-1}                    # hostname display
+POWERLINE_VENV=${POWERLINE_VENV:-1}                     # python venv prefix in path
+POWERLINE_JOBS=${POWERLINE_JOBS:-1}                     # background jobs segment
+POWERLINE_CMD_TIME=${POWERLINE_CMD_TIME:-1}             # command execution time segment
+POWERLINE_CMD_TIME_THRESHOLD=${POWERLINE_CMD_TIME_THRESHOLD:-2}  # seconds; only show if >= this
+POWERLINE_PATH_MAX_LEN=${POWERLINE_PATH_MAX_LEN:-0}     # truncate path to N segments (0=unlimited)
 POWERLINE_HOST_FORMAT=${POWERLINE_HOST_FORMAT:-\\H}     # \h or \H for short or full
-
 POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
 POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 
@@ -26,41 +29,43 @@ POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 declare -A pl_themes=(
     [default]=" |🖧 | |  ||| "
       [arrow]=" |🖧 | |  ||| "
-      [slant]="💻︎|🖧 | |  || | "
-       [diag]="💻︎|🖧 | |  || | "
+      [slant]="💻︎|🖧 | |  ||| "
+       [diag]="💻︎|🖧 | |  ||| "
        [soft]=" |🖧 | | ⟩ |🭬|🭬|🭬"
       [round]=" |🖧 | |  ||| "
 )
 
 # list of color schemes and their colors (color names separated by space ' ')
-# format =       default      successs       warn           fail          hostname      folder_icon     path            crumbs          git
+# format =       default      success        warn           fail          hostname      folder_icon     path            crumbs          git             success_bg
 declare -A pl_colors=(
-      [default]="LightGrey    SpringGreen3   tan3           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22         "
-    [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3          "
-#     [dracula]="grey25       SeaGreen3      DarkOrange3    red3          DeepPink3     gold3           SeaGreen3       SkyBlue3        SlateBlue3     "
-      [gruvbox]="yellow3      DarkOliveGreen gold4          red1          red4          gold1           SlateBlue3      SlateBlue1      cyan3          "
-         [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2       "
-#     [monokai]="SlateBlue3   Chartreuse2    DarkGoldenrod3 red3          DarkRed       DarkSeaGreen3   DarkCyan        SlateBlue3      grey37         "
-        [ocean]="RoyalBlue4   DodgerGreen1   chocolate4     red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4     "
-       [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4"
-       [sunset]="brown4       OrangeRed3     grey32         firebrick1    coral3        red3            goldenrod3      orange2         LightGoldenrod3"
+      [default]="LightGrey    SpringGreen1   tan1           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22          SpringGreen4"
+    [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3           DarkGreen"
+         [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2        DarkSlateGray"
+        [ocean]="RoyalBlue4   DodgerGreen1   white          red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4      DarkGreen"
+       [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4 DarkOliveGreen"
+       [sunset]="white        white          black          red1          MediumOrchid4 white           PaleVioletRed3  white           LightSalmon1    firebrick4"
+   [catppuccin]="grey30       SpringGreen3   black          red1          LightSkyBlue2 grey30          LightPink1      grey30          LightSteelBlue1 DarkGreen"
+      [blueish]="MidnightBlue SpringGreen3   black          red1          SlateGray4    MidnightBlue    DarkTurquoise   MidnightBlue    LightSteelBlue2 DarkSlateGray"
 )
 
-# desc:   setup PS1 with fancy prompt
-# output: a new PS1
+# Nerd Font system icons keyed by $OSTYPE prefix (used when POWERLINE_OS_ICON=1)
+declare -A pl_os_icons=(
+    [darwin]=$'\uf179' [linux]=$'\uf17c'
+    [freebsd]=$'\uf30c' [openbsd]=$'\uf30c' [netbsd]=$'\uf30c'
+    [cygwin]=$'\uf17a' [msys]=$'\uf17a' [mingw]=$'\uf17a'
+)
+
 powerline_set_ps1() {
-    # uncomment if you wish to see a marker for modified git
-    #pl_symbol_git_modified=*
+    #pl_symbol_git_modified=*                            # uncomment to mark modified git
     pl_symbol_git_branch=
     pl_symbol_git_push=⇡
     pl_symbol_git_pull=⇣
-
     pl_color_reset='\001\e[0m\002'
     pl_color_invert='\001\e[7m\002'
-
     pl_colors ${POWERLINE_COLORS}
-    pl_theme ${POWERLINE_THEME}
-
+    pl_theme  ${POWERLINE_THEME}
+    # DEBUG trap grabs start time of each user command for cmd_time
+    [[ ${POWERLINE_CMD_TIME:-1} = 0 ]] || trap '[[ -z $pl_timer_start ]] && printf -v pl_timer_start "%(%s)T" -1' DEBUG
     PROMPT_COMMAND="pl_ps1"
 }
 
@@ -69,186 +74,187 @@ powerline_set_ps1() {
 #              (eg, " |🖧 |  | | | ")
 # output: pl_symbol_ variables propagated
 pl_theme() {
-    IFS='|' read -r          \
-        pl_symbol_host       \
-        pl_symbol_network    \
-        pl_symbol_folder     \
-        pl_symbol_crumb      \
-        pl_symbol_part_start \
-        pl_symbol_part_next  \
-        pl_symbol_part_end   \
+    IFS='|' read -r pl_symbol_host pl_symbol_network pl_symbol_folder \
+        pl_symbol_crumb pl_symbol_part_start pl_symbol_part_next pl_symbol_part_end \
         <<< "${pl_themes[$1]}"
-
-    pl_system_symbol=${pl_symbol_host}
-    # detect SSH connection (TODO: detect nfs mount)
-    if [[ ! -z ${SSH_CONNECTION} ]]; then  # [[ `who am i` =~ \([0-9\.]+\)$ ]]
-        pl_system_symbol=${pl_symbol_network}
-    fi
-
-    # invert color for pl_symbol_part_start if needed
-    if [[ "$pl_symbol_part_end" =~ $pl_symbol_part_start ]]; then
+    # invert part_start if the theme reuses the same char as part_end
+    [[ "$pl_symbol_part_end" =~ $pl_symbol_part_start ]] && \
         pl_symbol_part_start=${pl_color_invert}${pl_symbol_part_start}${pl_color_reset}
-    fi
-
     pl_crumb_symbol="${pl_color_crumb}${pl_symbol_crumb}${pl_color_default}"
     POWERLINE_THEME=$1
 }
 
-# desc:   setup colors from selected color scheme
-# input:  $1 = string containing list of colors separated by space ' '
-#              (eg. "color1 color2 color3")
-# output: pl_color_ variables propagated
+# rgb name -> "r;g;b" lookup map; populated once from showrgb (see pl_colors).
+# Color schemes may also use #RRGGBB hex values directly; these are resolved on the fly.
+declare -gA pl_rgb_map
+pl_rgb_resolve() {
+    REPLY=; [[ -z $1 ]] && return
+    REPLY=${pl_rgb_map[$1]}
+    [[ -z $REPLY && $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]] && \
+        REPLY="$((16#${BASH_REMATCH[1]}));$((16#${BASH_REMATCH[2]}));$((16#${BASH_REMATCH[3]}))"
+}
+# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB
+pl_mkcolor() { pl_rgb_resolve "$3"; declare -g $1="\001\e[$2;2;${REPLY}m\002"; }
+pl_rgb()      { pl_mkcolor "$1" 38 "$2"; }
+pl_rgb_bg()   { pl_mkcolor "$1" 48 "$2"; }
+
 pl_colors() {
-    declare -A rgb
-    pl_rgb()    { declare -g $1="\001\e[38;2;${rgb[$2]}m\002"; }
-    pl_rgb_bg() { declare -g $1="\001\e[48;2;${rgb[$2]}m\002"; }
-
-    # fill rgb array with colors from showrgb
-    while read -r r g b color_name extra; do
-        color_name+=${extra:+ ${extra}}
-        rgb["${color_name}"]="$r;$g;$b"
-    done < <(showrgb)
-
-    # read powerline color theme
-    read -a colors <<< ${pl_colors[$1]}
-
-    pl_rgb    pl_color_default    ${colors[0]}
-    pl_rgb    pl_color_success    ${colors[1]}
-    pl_rgb    pl_color_warning    ${colors[2]}
-    pl_rgb    pl_color_failure    ${colors[3]}
-    pl_rgb_bg pl_color_bg_failure ${colors[3]}
-    pl_rgb    pl_color_host       ${colors[4]}
-    pl_rgb_bg pl_color_bg_host    ${colors[4]}
-    pl_rgb    pl_color_icon       ${colors[5]}
-    pl_rgb_bg pl_color_bg_icon    ${colors[5]}
-    pl_rgb_bg pl_color_bg_path    ${colors[6]}
-    pl_rgb    pl_color_path       ${colors[6]}
-    pl_rgb    pl_color_crumb      ${colors[7]}
-    pl_rgb    pl_color_git        ${colors[8]}
-    pl_rgb_bg pl_color_bg_git     ${colors[8]}
-
-    unset colors rgb
+    if [[ ${#pl_rgb_map[@]} -eq 0 ]] && command -v showrgb &>/dev/null; then
+        local r g b color_name extra
+        while read -r r g b color_name extra; do
+            color_name+=${extra:+ ${extra}}
+            pl_rgb_map["${color_name}"]="$r;$g;$b"
+        done < <(showrgb)
+    fi
+    local colors
+    read -a colors <<< "${pl_colors[$1]}"
+    pl_rgb    pl_color_default ${colors[0]}
+    pl_rgb    pl_color_success ${colors[1]}
+    pl_rgb    pl_color_success_dark ${colors[9]}; pl_rgb_bg pl_color_bg_success ${colors[9]}
+    pl_rgb    pl_color_warning ${colors[2]}; pl_rgb_bg pl_color_bg_warning ${colors[2]}
+    pl_rgb    pl_color_failure ${colors[3]}; pl_rgb_bg pl_color_bg_failure ${colors[3]}
+    pl_rgb    pl_color_host    ${colors[4]}; pl_rgb_bg pl_color_bg_host    ${colors[4]}
+    pl_rgb    pl_color_icon    ${colors[5]}; pl_rgb_bg pl_color_bg_icon    ${colors[5]}
+    pl_rgb    pl_color_path    ${colors[6]}; pl_rgb_bg pl_color_bg_path    ${colors[6]}
+    pl_rgb    pl_color_crumb   ${colors[7]}
+    pl_rgb    pl_color_git     ${colors[8]}; pl_rgb_bg pl_color_bg_git     ${colors[8]}
     pl_crumb_symbol="${pl_color_crumb}${pl_symbol_crumb}${pl_color_default}"
+    pl_host_cache_key=   # invalidate host_info cache
     POWERLINE_COLORS=$1
 }
 
-# desc:   populate git_info if git info found
-# output: git_info variable propagated
 pl_git_info() {
-    # clear git_info
-    unset $1
-    # check for .git directory in parent dirs (it's faster than running git)
-    local git_dir=$PWD
-    while [[ -n "$git_dir" && ! -d $git_dir/.git ]]; do
-        git_dir="${git_dir%/*}"
-    done
-    [[ -z $git_dir && ! -d /.git ]] && return
-
-    # check if 'git' command exists
-    #command git 2>/dev/null || return # git not found
-
-    # force git output in English to make our work easier
-    local git_eng="env LANG=C git"
-
-    # get current branch name
-    local ref=$(${git_eng} symbolic-ref --short -q HEAD 2>/dev/null)
-    [[ -n "${ref}" ]] || ref=$(${git_eng} rev-parse --short HEAD)
-
-    # get tag name or short unique hash
-    #[[ -n "${ref}" ]] || ref=$(${git_eng} describe --tags --always 2>/dev/null)
-    [[ -n "${ref}" ]] || return  # not a git repo
-
-    # prepend branch symbol
-    ref="${pl_symbol_git_branch} ${ref}"
-
-    # convert each digit from input ($2) using list ($3) and add to ($1)
-    pl_conv() { for ((i=0; i<${#2}; i++)); do export ${1}+="${3:${2:$i:1}:1}"; done; }
-
-    local marks
-    # scan first two lines of output from `git status`
+    local -n git=$1
+    # cached .git walk per PWD; -e (not -d) so submodules/worktrees work
+    if [[ $PWD != $pl_git_dir_pwd ]]; then
+        pl_git_dir_pwd=$PWD pl_git_dir=$PWD
+        while [[ -n $pl_git_dir && ! -e $pl_git_dir/.git ]]; do
+            pl_git_dir=${pl_git_dir%/*}
+        done
+    fi
+    [[ -z $pl_git_dir && ! -e /.git ]] && return
+    # single git call: parse branch + ahead/behind + dirty from status --branch
+    local git_eng="env LANG=C git --no-optional-locks"
+    local ref marks line dirty=
     while IFS= read -r line; do
-        if [[ ${line} =~ ^## ]]; then # header line
-            [[ ${line} =~ ahead\ ([0-9]+) ]]     && \
-                marks+=" ${pl_symbol_git_push}"  && \
-                pl_conv marks ${BASH_REMATCH[1]} "₀₁₂₃₄₅₆₇₈₉"
-            [[ ${line} =~ behind\ ([0-9]+) ]]    && \
-                marks+=" ${pl_symbol_git_pull}"  && \
-                pl_conv marks ${BASH_REMATCH[1]} "⁰¹²³⁴⁵⁶⁷⁸⁹"
+        if [[ ${line} =~ ^## ]]; then
+            ref=${line#\#\# }; ref=${ref%%...*}; ref=${ref%% \[*}
+            [[ $ref == *"no branch"* ]] && ref=$(${git_eng} rev-parse --short HEAD 2>/dev/null)
+            [[ ${line} =~ ahead\ ([0-9]+)  ]] && marks+=" ${pl_symbol_git_push}" && pl_conv marks ${BASH_REMATCH[1]} "₀₁₂₃₄₅₆₇₈₉"
+            [[ ${line} =~ behind\ ([0-9]+) ]] && marks+=" ${pl_symbol_git_pull}" && pl_conv marks ${BASH_REMATCH[1]} "⁰¹²³⁴⁵⁶⁷⁸⁹"
         else
-            # branch is modified if output contains lines after header
-            marks="${pl_symbol_git_modified}${marks}"
-            ref="${pl_color_warning}${ref}"
+            dirty=1; marks="${pl_symbol_git_modified}${marks}"
             break
         fi
-    # loop while reading git result (note the space between the two <)
     done < <(${git_eng} status --porcelain --branch -uno 2>/dev/null)
-    [[ -n ${marks} ]] && ref="${pl_color_warning}${ref}"
+    [[ -z $ref ]] && return
+    ref="${pl_symbol_git_branch} ${ref}"
+    [[ -n $dirty ]] && ref="${pl_color_warning}${ref}"
+    git="${pl_color_success}${ref}${marks}"
+}
 
-    # add git branch segment
-    declare -g $1="${pl_color_success}${ref}${marks}"
+# convert each digit from input ($2) using list ($3) and append to ($1)
+pl_conv() {
+    local -n out=$1
+    local i
+    for ((i=0; i<${#2}; i++)); do out+="${3:${2:$i:1}:1}"; done
 }
 
 pl_host_info() {
-    export $1=${pl_color_host}
-    # set host_info with part_start & system symbols + hostname + part_next
-    export $2="${pl_color_bg_host} ${pl_color_default}${pl_system_symbol} "\
-"${POWERLINE_HOST_FORMAT} ${pl_color_bg_path}${pl_color_host}${pl_symbol_part_next}"
+    local -n start=$1 info=$2
+    # cached host_info; rebuilt only when any input changes
+    local key="${POWERLINE_THEME}:${POWERLINE_COLORS}:${POWERLINE_SPACE-0}:${SSH_CONNECTION}:${POWERLINE_HOST_FORMAT}"
+    if [[ $key != $pl_host_cache_key ]]; then
+        # pick system icon: SSH > OS match > theme default
+        local sys=${pl_symbol_host} k
+        for k in "${!pl_os_icons[@]}"; do
+            [[ $OSTYPE == $k* ]] && { sys=${pl_os_icons[$k]}; break; }
+        done
+        [[ -n ${SSH_CONNECTION} ]] && sys=${pl_symbol_network}
+        # when root, use failure colors for the host segment
+        local bg=${pl_color_bg_host} fg=${pl_color_host}
+        (( EUID == 0 )) && { bg=${pl_color_bg_failure}; fg=${pl_color_failure}; }
+        pl_host_cache_start=${fg}
+        pl_host_cache_info="${bg} ${pl_color_default}${sys} ${POWERLINE_HOST_FORMAT} ${pl_space_on:+${pl_color_reset}${fg}${pl_symbol_part_next}${pl_color_path}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${pl_space_off:+${pl_color_bg_path}${fg}${pl_symbol_part_next}}"
+        pl_host_cache_key=$key
+    fi
+    start=$pl_host_cache_start
+    info=$pl_host_cache_info
 }
 
 pl_crumbs() {
-    local path=${!1}
-    [[ ${#path}   -eq   1 ]] && return
+    local -n path=$1
+    (( ${#path} == 1 )) && return
+    path=${path//\//${pl_crumb_symbol}}
+    [[ ${path:0:1} == "~" ]] || path=/$path
+}
 
-    export $1="${!1//\//${pl_crumb_symbol}}"
-    [[ "${!1:0:1}" == "~" ]] || export $1="/${!1}"
+# truncate path to POWERLINE_PATH_MAX_LEN segments, inserting …
+pl_path_truncate() {
+    local max=${POWERLINE_PATH_MAX_LEN}
+    (( max < 2 )) && return
+    local -n path=$1
+    local IFS=/
+    local -a parts=($path)
+    (( ${#parts[@]} <= max )) && return
+    path="${parts[0]}/…/${parts[*]: -max+1}"
+}
+
+# $1=bg escape, $2=fg escape, $3=content; appends a colored segment to PS1
+pl_seg() {
+    PS1+="${pl_space_on:+${pl_symbol_part_next}${2}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${1}${pl_space_off:+${pl_symbol_part_next}}${pl_color_default} ${3} ${pl_color_reset}${2}"
+}
+
+pl_venv_info() {
+    local -n out=$1; out=
+    [[ ${POWERLINE_VENV} = 0 ]] && return
+    local env=${VIRTUAL_ENV:-${CONDA_DEFAULT_ENV}}
+    [[ -n $env ]] && out="${pl_color_warning}(${env##*/})${pl_color_default} "
+}
+
+pl_jobs_info() {
+    local -n out=$1; out=0
+    [[ ${POWERLINE_JOBS} = 0 ]] || while read -r _; do ((out++)); done < <(jobs -rp 2>/dev/null)
+    (( out )) || out=
+}
+
+pl_cmd_time_info() {
+    local -n out=$1; out=
+    [[ -z $pl_timer_start ]] && return
+    local now; printf -v now '%(%s)T' -1
+    local elapsed=$(( now - pl_timer_start ))
+    (( elapsed >= ${POWERLINE_CMD_TIME_THRESHOLD:-2} )) && out="${elapsed}s"
+    pl_timer_start=
 }
 
 pl_ps1() {
-    # remember last command result (make it blank if zero)
     local last_cmd_result=${?##0}
-    local host_info start_color=${pl_color_path}
-    local folder_color=${pl_color_icon}
-    # format working directory to ~ (its faster than `dirs`)
-    local wd="${PWD/#${HOME}/\~}"
+    local start_color=${pl_color_path} folder_color=${pl_color_icon}
+    local host_info git_info venv jobs_count cmd_time
+    local wd=${PWD/#${HOME}/\~}
+    local pl_space_on=${POWERLINE_SPACE-0}
+    local pl_space_off=${pl_space_on//[!0]/}
+    pl_space_on=${pl_space_on//0/}
+    [[ -w $PWD ]] || folder_color=${pl_color_failure}
 
-    # Check if PWD is writable and set folder color accordingly
-    [[ -w ${PWD} ]] || folder_color="${pl_color_failure}"
-
-    # make crumbs from path if needed
+    pl_path_truncate wd
     [[ ${POWERLINE_CRUMBS} = 0 ]] || pl_crumbs wd
-    # setup host_info if needed
     [[ ${POWERLINE_HOST}   = 0 ]] || pl_host_info start_color host_info
-    # setup git info if needed
     [[ ${POWERLINE_GIT}    = 0 ]] || pl_git_info git_info
+    pl_venv_info     venv
+    pl_jobs_info     jobs_count
+    pl_cmd_time_info cmd_time
 
-    #  ┏┓┏┓┓
-    #  ┃┃┗┓┃ Finally we are ready to start assembly our prompt
-    #  ┣┛┗┛┻
-
-    # Add part_start symbol and host_info if any
-    PS1="${start_color}${pl_symbol_part_start}${host_info}"
-
-    # Add folder symbol + Working directory
-    PS1+="${pl_color_bg_path} ${folder_color}${pl_symbol_folder}${pl_color_default} "\
-"${wd} ${pl_color_reset}${pl_color_path}"
-
-    # Expand git info if we have any
-    PS1+="${git_info:+${pl_color_bg_git}${pl_symbol_part_next} ${git_info} "\
-"${pl_color_reset}${pl_color_git}}"
-
-    # Expand last command result (FIXME: show only once)
-    PS1+="${last_cmd_result:+${pl_color_bg_failure}${pl_symbol_part_next} "\
-"${pl_color_default}${last_cmd_result} ${pl_color_reset}${pl_color_failure}}"
-
-    # Finalize PS1
+    PS1="${start_color}${pl_symbol_part_start}${host_info}${pl_color_bg_path} ${folder_color}${pl_symbol_folder}${pl_color_default} ${venv}${wd} ${pl_color_reset}${pl_color_path}"
+    [[ -n $git_info ]]        && pl_seg "$pl_color_bg_git"     "$pl_color_git"           "$git_info"
+    [[ -n $jobs_count ]]      && pl_seg "$pl_color_bg_host"    "$pl_color_host"          $'\uf013  '"$jobs_count"
+    [[ -n $cmd_time ]]        && pl_seg "$pl_color_bg_success" "$pl_color_success_dark"  $'\uf017  '"$cmd_time"
+    [[ -n $last_cmd_result ]] && pl_seg "$pl_color_bg_failure" "$pl_color_failure"       "$last_cmd_result"
     PS1+="${pl_symbol_part_end}${pl_color_reset}"
-
-    # cleanup
-    unset git_info
 }
 
-# exit if there is no interactive terminal (commit by @prof7bit)
-tty -s || exit
+# bail out in non-interactive shells (works whether sourced or executed)
+tty -s || return 2>/dev/null || exit
 
 powerline_set_ps1
 unset powerline_set_ps1
