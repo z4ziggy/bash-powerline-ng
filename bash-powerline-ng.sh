@@ -63,10 +63,6 @@ powerline_set_ps1() {
     pl_color_invert='\001\e[7m\002'
     pl_colors ${POWERLINE_COLORS}
     pl_theme  ${POWERLINE_THEME}
-    # pre-compute space toggle (call pl_refresh if changing POWERLINE_SPACE at runtime)
-    pl_space_on=${POWERLINE_SPACE-0}
-    pl_space_off=${pl_space_on//[!0]/}
-    pl_space_on=${pl_space_on//0/}
     # DEBUG trap: track real commands (for error display) + grab start time (for cmd_time)
     trap '[[ $BASH_COMMAND != pl_ps1 ]] && pl_cmd_ran=1; [[ -z $pl_timer_start ]] && printf -v pl_timer_start "%(%s)T" -1' DEBUG
     PROMPT_COMMAND="pl_ps1"
@@ -237,6 +233,9 @@ pl_ps1() {
     local start_color=${pl_color_path} folder_color=${pl_color_icon}
     local host_info git_info venv jobs_count cmd_time
     local wd=${PWD/#${HOME}/\~}
+    local pl_space_on=${POWERLINE_SPACE-0}
+    local pl_space_off=${pl_space_on//[!0]/}
+    pl_space_on=${pl_space_on//0/}
     [[ -w $PWD ]] || folder_color=${pl_color_failure}
 
     pl_path_truncate wd
