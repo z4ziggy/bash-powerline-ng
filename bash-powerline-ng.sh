@@ -14,11 +14,12 @@
 POWERLINE_SPACE=${POWERLINE_SPACE:-1}                   # "crumb space" between fields
 POWERLINE_GIT=${POWERLINE_GIT:-1}                       # git parsing
 POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-1}                 # crumbs in path names
-#POWERLINE_HOST=${POWERLINE_HOST:-1}                    # hostname display
+POWERLINE_HOST=${POWERLINE_HOST:-0}                     # hostname display
 POWERLINE_VENV=${POWERLINE_VENV:-1}                     # python venv prefix in path
 POWERLINE_JOBS=${POWERLINE_JOBS:-1}                     # background jobs segment
 POWERLINE_CMD_TIME=${POWERLINE_CMD_TIME:-1}             # command execution time segment
 POWERLINE_CMD_TIME_THRESHOLD=${POWERLINE_CMD_TIME_THRESHOLD:-2}  # seconds; only show if >= this
+POWERLINE_GIT_CACHE_TTL=${POWERLINE_GIT_CACHE_TTL:-3}   # seconds; cache git status (0=off)
 POWERLINE_PATH_MAX_LEN=${POWERLINE_PATH_MAX_LEN:-0}     # truncate path to N segments (0=unlimited)
 POWERLINE_HOST_FORMAT=${POWERLINE_HOST_FORMAT:-\\H}     # \h or \H for short or full
 POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
@@ -38,22 +39,20 @@ declare -A pl_themes=(
 # list of color schemes and their colors (color names separated by space ' ')
 # format =       default      success        warn           fail          hostname      folder_icon     path            crumbs          git             success_bg
 declare -A pl_colors=(
-      [default]="LightGrey    SpringGreen1   tan1           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22          SpringGreen4"
+      [default]="LightGrey    SpringGreen2   tan1           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22          SpringGreen4"
     [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3           DarkGreen"
-         [nord]="DeepSkyBlue4 CadetBlue3     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2        DarkSlateGray"
+         [nord]="DeepSkyBlue4 CadetBlue5     DeepSkyBlue4   MediumPurple3 LightSkyBlue3 MediumPurple3   LightSteelBlue3 SteelBlue2      SkyBlue2        DarkSlateGray"
         [ocean]="RoyalBlue4   DodgerGreen1   white          red3          DodgerBlue1   SkyBlue4        SlateGray3      SlateGray4      LightCyan4      DarkGreen"
        [forest]="sienna       yellow1        goldenrod1     firebrick3    chartreuse3   SpringGreen4    DarkOliveGreen3 DarkOliveGreen2 DarkOliveGreen4 DarkOliveGreen"
-       [sunset]="white        white          black          red1          MediumOrchid4 white           PaleVioletRed3  white           LightSalmon1    firebrick4"
+       [sunset]="white        white          black          red1          MediumOrchid4 white           PaleVioletRed3  white           sienna4         firebrick4"
    [catppuccin]="grey30       SpringGreen3   black          red1          LightSkyBlue2 grey30          LightPink1      grey30          LightSteelBlue1 DarkGreen"
-      [blueish]="MidnightBlue SpringGreen3   black          red1          SlateGray4    MidnightBlue    DarkTurquoise   MidnightBlue    LightSteelBlue2 DarkSlateGray"
+      [blueish]="MidnightBlue MidnightBlue   black          red1          SlateGray4    MidnightBlue    DarkTurquoise   MidnightBlue    LightSteelBlue2 DarkSlateGray"
+        [earth]="#A8CC8C      #A8CC8C        #E8A75D        #CC6666       #3E3A36       #D4C96B         #4A4540         #6B6560         #35322E         #2D3A2D"
+      [rainbow]="white        white          white          #CC241D       #D65D0E       white           #D79921         white           #689D6A         #458588"
 )
 
-# Nerd Font system icons keyed by $OSTYPE prefix (used when POWERLINE_OS_ICON=1)
-declare -A pl_os_icons=(
-    [darwin]=$'\uf179' [linux]=$'\uf17c'
-    [freebsd]=$'\uf30c' [openbsd]=$'\uf30c' [netbsd]=$'\uf30c'
-    [cygwin]=$'\uf17a' [msys]=$'\uf17a' [mingw]=$'\uf17a'
-)
+# Nerd Font system icons keyed by $OSTYPE prefix
+declare -A pl_os_icons=([darwin]=$'\uf179' [linux]=$'\uf17c')
 
 powerline_set_ps1() {
     #pl_symbol_git_modified=*                            # uncomment to mark modified git
@@ -64,15 +63,15 @@ powerline_set_ps1() {
     pl_color_invert='\001\e[7m\002'
     pl_colors ${POWERLINE_COLORS}
     pl_theme  ${POWERLINE_THEME}
-    # DEBUG trap grabs start time of each user command for cmd_time
-    [[ ${POWERLINE_CMD_TIME:-1} = 0 ]] || trap '[[ -z $pl_timer_start ]] && printf -v pl_timer_start "%(%s)T" -1' DEBUG
+    # pre-compute space toggle (call pl_refresh if changing POWERLINE_SPACE at runtime)
+    pl_space_on=${POWERLINE_SPACE-0}
+    pl_space_off=${pl_space_on//[!0]/}
+    pl_space_on=${pl_space_on//0/}
+    # DEBUG trap: track real commands (for error display) + grab start time (for cmd_time)
+    trap '[[ $BASH_COMMAND != pl_ps1 ]] && pl_cmd_ran=1; [[ -z $pl_timer_start ]] && printf -v pl_timer_start "%(%s)T" -1' DEBUG
     PROMPT_COMMAND="pl_ps1"
 }
 
-# desc:   setup symbol variables from selected theme
-# input:  $1 = string containing theme symbols separated by pipe '|'
-#              (eg, " |🖧 |  | | | ")
-# output: pl_symbol_ variables propagated
 pl_theme() {
     IFS='|' read -r pl_symbol_host pl_symbol_network pl_symbol_folder \
         pl_symbol_crumb pl_symbol_part_start pl_symbol_part_next pl_symbol_part_end \
@@ -90,8 +89,10 @@ declare -gA pl_rgb_map
 pl_rgb_resolve() {
     REPLY=; [[ -z $1 ]] && return
     REPLY=${pl_rgb_map[$1]}
-    [[ -z $REPLY && $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]] && \
+    if [[ -z $REPLY && $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]]; then
         REPLY="$((16#${BASH_REMATCH[1]}));$((16#${BASH_REMATCH[2]}));$((16#${BASH_REMATCH[3]}))"
+        pl_rgb_map[$1]=$REPLY   # cache for next lookup
+    fi
 }
 # $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB
 pl_mkcolor() { pl_rgb_resolve "$3"; declare -g $1="\001\e[$2;2;${REPLY}m\002"; }
@@ -120,6 +121,7 @@ pl_colors() {
     pl_rgb    pl_color_git     ${colors[8]}; pl_rgb_bg pl_color_bg_git     ${colors[8]}
     pl_crumb_symbol="${pl_color_crumb}${pl_symbol_crumb}${pl_color_default}"
     pl_host_cache_key=   # invalidate host_info cache
+    pl_git_cache_dir=    # invalidate git_info cache
     POWERLINE_COLORS=$1
 }
 
@@ -133,6 +135,11 @@ pl_git_info() {
         done
     fi
     [[ -z $pl_git_dir && ! -e /.git ]] && return
+    # cache: reuse result if same repo and within TTL (EPOCHREALTIME for precision)
+    local ttl=${POWERLINE_GIT_CACHE_TTL:-3}
+    if (( ttl > 0 )) && [[ $pl_git_dir == $pl_git_cache_dir ]]; then
+        local age=${EPOCHREALTIME%.*}; (( age - ${pl_git_cache_time:-0} < ttl )) && { git=$pl_git_cache; return; }
+    fi
     # single git call: parse branch + ahead/behind + dirty from status --branch
     local git_eng="env LANG=C git --no-optional-locks"
     local ref marks line dirty=
@@ -151,14 +158,10 @@ pl_git_info() {
     ref="${pl_symbol_git_branch} ${ref}"
     [[ -n $dirty ]] && ref="${pl_color_warning}${ref}"
     git="${pl_color_success}${ref}${marks}"
+    pl_git_cache=$git pl_git_cache_dir=$pl_git_dir pl_git_cache_time=${EPOCHREALTIME%.*}
 }
 
-# convert each digit from input ($2) using list ($3) and append to ($1)
-pl_conv() {
-    local -n out=$1
-    local i
-    for ((i=0; i<${#2}; i++)); do out+="${3:${2:$i:1}:1}"; done
-}
+pl_conv() { local -n out=$1; local i; for ((i=0; i<${#2}; i++)); do out+="${3:${2:$i:1}:1}"; done; }
 
 pl_host_info() {
     local -n start=$1 info=$2
@@ -228,13 +231,12 @@ pl_cmd_time_info() {
 }
 
 pl_ps1() {
-    local last_cmd_result=${?##0}
+    local last_cmd_result=$?
+    [[ -n $pl_cmd_ran ]] && last_cmd_result=${last_cmd_result##0} || last_cmd_result=
+    pl_cmd_ran=
     local start_color=${pl_color_path} folder_color=${pl_color_icon}
     local host_info git_info venv jobs_count cmd_time
     local wd=${PWD/#${HOME}/\~}
-    local pl_space_on=${POWERLINE_SPACE-0}
-    local pl_space_off=${pl_space_on//[!0]/}
-    pl_space_on=${pl_space_on//0/}
     [[ -w $PWD ]] || folder_color=${pl_color_failure}
 
     pl_path_truncate wd

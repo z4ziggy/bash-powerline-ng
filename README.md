@@ -7,7 +7,7 @@ Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 
 ## Features
 
-* Fast execution
+* Small size and fast execution - no overhead, no bloat
 * Git branch: display branch symbol and current git branch name, or short SHA1 hash when the head is detached
 * Git branch: foreground color reflects uncommitted changes
 * Git branch: display "⇡" or "⇣" symbols plus the difference in the number of commits when the current branch is ahead or behind of remote (see screenshot)
@@ -36,8 +36,7 @@ Code should be easy enough to change and adapt to your liking - it's one source 
 
 ## Why
 
-Because [bash-powerline](https://github.com/riobard/bash-powerline) is great, 
-but I wanted it to look nicer.
+Because [bash-powerline](https://github.com/riobard/bash-powerline) is great, but I wanted it to look nicer.
 
-For everything else, please check the original [bash-powerline](https://github.com/riobard/bash-powerline) project
-
+---
+_I'd tell you a UDP joke, but you probably wouldn't get it._
