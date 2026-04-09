@@ -2,20 +2,18 @@
 
 # bash-powerline-ng (c) z4ziggy 2014-2026
 # Minimalist, lightweight, usable and themable Powerline in pure Bash script.
-#
-# Code should be easy enough to change and adapt to your liking - it's one
-# source file with less than 300 lines of code, modestly commented.
+# Easy enough to change and adapt to your liking: one source file, modestly commented.
 
 #  ┏┓┏┓┏┳┓┳┏┓┳┓┏┓
 #  ┃┃┃┃ ┃ ┃┃┃┃┃┗┓
 #  ┗┛┣┛ ┻ ┻┗┛┛┗┗┛
-#
+
 # Set before sourcing, pass on the `source` cmdline, or set after (0=off, 1=on):
 POWERLINE_SPACE=${POWERLINE_SPACE:-1}                   # "crumb space" between fields
 POWERLINE_GIT=${POWERLINE_GIT:-1}                       # git parsing
 POWERLINE_CRUMBS=${POWERLINE_CRUMBS:-1}                 # crumbs in path names
 POWERLINE_HOST=${POWERLINE_HOST:-0}                     # hostname display
-POWERLINE_VENV=${POWERLINE_VENV:-1}                     # python venv prefix in path
+POWERLINE_VENV=${POWERLINE_VENV:-1}                     # python venv segment
 POWERLINE_JOBS=${POWERLINE_JOBS:-1}                     # background jobs segment
 POWERLINE_CMD_TIME=${POWERLINE_CMD_TIME:-1}             # command execution time segment
 POWERLINE_CMD_TIME_THRESHOLD=${POWERLINE_CMD_TIME_THRESHOLD:-2}  # seconds; only show if >= this
@@ -25,8 +23,8 @@ POWERLINE_HOST_FORMAT=${POWERLINE_HOST_FORMAT:-\\H}     # \h or \H for short or 
 POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
 POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
 
-# list of themes and their symbols (separated by pipe '|') (spaces included).
-# format = HOST | NETWORK | FOLDER | CRUMB | PART_START | PART_NEXT | PART_END
+# list of themes and their symbols (separated by pipe '|') (spaces included):
+# HOST | NETWORK | FOLDER | CRUMB | PART_START | PART_NEXT | PART_END
 declare -A pl_themes=(
     [default]=" |🖧 | |  ||| "
       [arrow]=" |🖧 | |  ||| "
@@ -35,9 +33,8 @@ declare -A pl_themes=(
        [soft]=" |🖧 | | ⟩ |🭬|🭬|🭬"
       [round]=" |🖧 | |  ||| "
 )
-
-# list of color schemes and their colors (color names separated by space ' ')
-# format =       default      success        warn           fail          hostname      folder_icon     path            crumbs          git             success_bg
+# list of color schemes and their colors (color names separated by space ' '):
+# default success warn fail hostname folder_icon path crumbs git success_bg
 declare -A pl_colors=(
       [default]="LightGrey    SpringGreen2   tan1           DarkRed       SteelBlue     DeepSkyBlue1    grey36          grey22          grey22          SpringGreen4"
     [solarized]="black        lime           black          red1          orange1       magenta3        violet          HotPink2        cyan3           DarkGreen"
@@ -61,26 +58,23 @@ powerline_set_ps1() {
     pl_symbol_git_pull=⇣
     pl_color_reset='\001\e[0m\002'
     pl_color_invert='\001\e[7m\002'
-    pl_colors ${POWERLINE_COLORS}
-    pl_theme  ${POWERLINE_THEME}
+    pl_set_colors ${POWERLINE_COLORS}
+    pl_set_theme  ${POWERLINE_THEME}
     # DEBUG trap: track real commands (for error display) + grab start time (for cmd_time)
     trap '[[ $BASH_COMMAND != pl_ps1 ]] && pl_cmd_ran=1; [[ -z $pl_timer_start ]] && printf -v pl_timer_start "%(%s)T" -1' DEBUG
     PROMPT_COMMAND="pl_ps1"
 }
 
-pl_theme() {
-    IFS='|' read -r pl_symbol_host pl_symbol_network pl_symbol_folder \
-        pl_symbol_crumb pl_symbol_part_start pl_symbol_part_next pl_symbol_part_end \
-        <<< "${pl_themes[$1]}"
+pl_set_theme() {
+    IFS='|' read -r pl_symbol_host pl_symbol_network pl_symbol_folder pl_symbol_crumb \
+        pl_symbol_part_start pl_symbol_part_next pl_symbol_part_end <<< "${pl_themes[$1]}"
     # invert part_start if the theme reuses the same char as part_end
-    [[ "$pl_symbol_part_end" =~ $pl_symbol_part_start ]] && \
-        pl_symbol_part_start=${pl_color_invert}${pl_symbol_part_start}${pl_color_reset}
+    [[ "$pl_symbol_part_end" =~ $pl_symbol_part_start ]] && pl_symbol_part_start=${pl_color_invert}${pl_symbol_part_start}${pl_color_reset}
     pl_crumb_symbol="${pl_color_crumb}${pl_symbol_crumb}${pl_color_default}"
     POWERLINE_THEME=$1
 }
 
-# rgb name -> "r;g;b" lookup map; populated once from showrgb (see pl_colors).
-# Color schemes may also use #RRGGBB hex values directly; these are resolved on the fly.
+# rgb name -> "r;g;b" lookup map; populated once from showrgb; hex #RRGGBB also works.
 declare -gA pl_rgb_map
 pl_rgb_resolve() {
     REPLY=; [[ -z $1 ]] && return
@@ -90,12 +84,13 @@ pl_rgb_resolve() {
         pl_rgb_map[$1]=$REPLY   # cache for next lookup
     fi
 }
-# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB
-pl_mkcolor() { pl_rgb_resolve "$3"; declare -g $1="\001\e[$2;2;${REPLY}m\002"; }
-pl_rgb()      { pl_mkcolor "$1" 38 "$2"; }
-pl_rgb_bg()   { pl_mkcolor "$1" 48 "$2"; }
 
-pl_colors() {
+# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB
+pl_mkcolor()    { pl_rgb_resolve "$3"; declare -g $1="\001\e[$2;2;${REPLY}m\002"; }
+pl_rgb()        { pl_mkcolor "$1" 38 "$2"; }
+pl_rgb_bg()     { pl_mkcolor "$1" 48 "$2"; }
+pl_color_pair() { pl_rgb "pl_color_$1" "$2"; pl_rgb_bg "pl_color_bg_$1" "$2"; }
+pl_set_colors() {
     if [[ ${#pl_rgb_map[@]} -eq 0 ]] && command -v showrgb &>/dev/null; then
         local r g b color_name extra
         while read -r r g b color_name extra; do
@@ -105,22 +100,24 @@ pl_colors() {
     fi
     local colors
     read -a colors <<< "${pl_colors[$1]}"
-    pl_rgb    pl_color_default ${colors[0]}
-    pl_rgb    pl_color_success ${colors[1]}
-    pl_rgb    pl_color_success_dark ${colors[9]}; pl_rgb_bg pl_color_bg_success ${colors[9]}
-    pl_rgb    pl_color_warning ${colors[2]}; pl_rgb_bg pl_color_bg_warning ${colors[2]}
-    pl_rgb    pl_color_failure ${colors[3]}; pl_rgb_bg pl_color_bg_failure ${colors[3]}
-    pl_rgb    pl_color_host    ${colors[4]}; pl_rgb_bg pl_color_bg_host    ${colors[4]}
-    pl_rgb    pl_color_icon    ${colors[5]}; pl_rgb_bg pl_color_bg_icon    ${colors[5]}
-    pl_rgb    pl_color_path    ${colors[6]}; pl_rgb_bg pl_color_bg_path    ${colors[6]}
-    pl_rgb    pl_color_crumb   ${colors[7]}
-    pl_rgb    pl_color_git     ${colors[8]}; pl_rgb_bg pl_color_bg_git     ${colors[8]}
+    pl_rgb        pl_color_default      ${colors[0]}
+    pl_rgb        pl_color_success      ${colors[1]}
+    pl_rgb        pl_color_success_dark ${colors[9]}
+    pl_rgb_bg     pl_color_bg_success   ${colors[9]}
+    pl_color_pair warning               ${colors[2]}
+    pl_color_pair failure               ${colors[3]}
+    pl_color_pair host                  ${colors[4]}
+    pl_color_pair icon                  ${colors[5]}
+    pl_color_pair path                  ${colors[6]}
+    pl_color_pair git                   ${colors[8]}
+    pl_rgb        pl_color_crumb        ${colors[7]}
     pl_crumb_symbol="${pl_color_crumb}${pl_symbol_crumb}${pl_color_default}"
     pl_host_cache_key=   # invalidate host_info cache
     pl_git_cache_dir=    # invalidate git_info cache
     POWERLINE_COLORS=$1
 }
 
+pl_conv() { local -n out=$1; local i; for ((i=0; i<${#2}; i++)); do out+="${3:${2:$i:1}:1}"; done; }
 pl_git_info() {
     local -n git=$1
     # cached .git walk per PWD; -e (not -d) so submodules/worktrees work
@@ -157,12 +154,11 @@ pl_git_info() {
     pl_git_cache=$git pl_git_cache_dir=$pl_git_dir pl_git_cache_time=${EPOCHREALTIME%.*}
 }
 
-pl_conv() { local -n out=$1; local i; for ((i=0; i<${#2}; i++)); do out+="${3:${2:$i:1}:1}"; done; }
-
 pl_host_info() {
     local -n start=$1 info=$2
+    local next_fg=${3:-$pl_color_path} next_bg=${4:-$pl_color_bg_path}
     # cached host_info; rebuilt only when any input changes
-    local key="${POWERLINE_THEME}:${POWERLINE_COLORS}:${POWERLINE_SPACE-0}:${SSH_CONNECTION}:${POWERLINE_HOST_FORMAT}"
+    local key="${POWERLINE_THEME}:${POWERLINE_COLORS}:${POWERLINE_SPACE-0}:${SSH_CONNECTION}:${POWERLINE_HOST_FORMAT}:${next_fg}:${next_bg}"
     if [[ $key != $pl_host_cache_key ]]; then
         # pick system icon: SSH > OS match > theme default
         local sys=${pl_symbol_host} k
@@ -170,45 +166,52 @@ pl_host_info() {
             [[ $OSTYPE == $k* ]] && { sys=${pl_os_icons[$k]}; break; }
         done
         [[ -n ${SSH_CONNECTION} ]] && sys=${pl_symbol_network}
-        # when root, use failure colors for the host segment
+        # root uses failure colors for the host segment
         local bg=${pl_color_bg_host} fg=${pl_color_host}
         (( EUID == 0 )) && { bg=${pl_color_bg_failure}; fg=${pl_color_failure}; }
         pl_host_cache_start=${fg}
-        pl_host_cache_info="${bg} ${pl_color_default}${sys} ${POWERLINE_HOST_FORMAT} ${pl_space_on:+${pl_color_reset}${fg}${pl_symbol_part_next}${pl_color_path}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${pl_space_off:+${pl_color_bg_path}${fg}${pl_symbol_part_next}}"
+        pl_host_cache_info="${bg} ${pl_color_default}${sys} ${POWERLINE_HOST_FORMAT} ${pl_space_on:+${pl_color_reset}${fg}${pl_symbol_part_next}${next_fg}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${pl_space_off:+${next_bg}${fg}${pl_symbol_part_next}}"
         pl_host_cache_key=$key
     fi
     start=$pl_host_cache_start
     info=$pl_host_cache_info
 }
 
-pl_crumbs() {
-    local -n path=$1
-    (( ${#path} == 1 )) && return
-    path=${path//\//${pl_crumb_symbol}}
-    [[ ${path:0:1} == "~" ]] || path=/$path
-}
-
-# truncate path to POWERLINE_PATH_MAX_LEN segments, inserting …
-pl_path_truncate() {
-    local max=${POWERLINE_PATH_MAX_LEN}
-    (( max < 2 )) && return
-    local -n path=$1
-    local IFS=/
-    local -a parts=($path)
-    (( ${#parts[@]} <= max )) && return
-    path="${parts[0]}/…/${parts[*]: -max+1}"
-}
-
-# $1=bg escape, $2=fg escape, $3=content; appends a colored segment to PS1
-pl_seg() {
-    PS1+="${pl_space_on:+${pl_symbol_part_next}${2}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${1}${pl_space_off:+${pl_symbol_part_next}}${pl_color_default} ${3} ${pl_color_reset}${2}"
+# truncate path to POWERLINE_PATH_MAX_LEN segments, insert crumbs, add folder icon
+pl_path_info() {
+    local -n out=$1
+    local wd=${PWD/#${HOME}/\~} folder_color=${pl_color_icon}
+    [[ -w $PWD ]] || folder_color=${pl_color_failure}
+    if (( POWERLINE_PATH_MAX_LEN >= 2 )); then
+        local IFS=/ max=${POWERLINE_PATH_MAX_LEN}
+        local -a parts=($wd)
+        (( ${#parts[@]} <= max )) || wd="${parts[0]}/…/${parts[*]: -max+1}"
+    fi
+    if [[ ${POWERLINE_CRUMBS} != 0 && ${#wd} != 1 ]]; then
+        wd=${wd//\//${pl_crumb_symbol}}
+        [[ ${wd:0:1} == "~" ]] || wd=/$wd
+    fi
+    out="${folder_color}${pl_symbol_folder}${pl_color_default} ${wd}"
 }
 
 pl_venv_info() {
     local -n out=$1; out=
-    [[ ${POWERLINE_VENV} = 0 ]] && return
     local env=${VIRTUAL_ENV:-${CONDA_DEFAULT_ENV}}
-    [[ -n $env ]] && out="${pl_color_warning}(${env##*/})${pl_color_default} "
+    [[ ${POWERLINE_VENV} = 0 || -z $env ]] || out=${env##*/}
+}
+
+# choose the first visible segment: path by default, venv when active
+pl_first_seg_info() {
+    local -n bg=$1 fg=$2 content=$3 content_fg=$4
+    bg=$pl_color_bg_path
+    fg=$pl_color_path
+    content=$5
+    content_fg=$pl_color_default
+    [[ -n $6 ]] || return
+    bg=$pl_color_bg_warning
+    fg=$pl_color_warning
+    content=$6
+    content_fg=$pl_color_path
 }
 
 pl_jobs_info() {
@@ -220,42 +223,45 @@ pl_jobs_info() {
 pl_cmd_time_info() {
     local -n out=$1; out=
     [[ -z $pl_timer_start ]] && return
-    local now; printf -v now '%(%s)T' -1
-    local elapsed=$(( now - pl_timer_start ))
+    local now elapsed
+    printf -v now '%(%s)T' -1
+    elapsed=$(( now - pl_timer_start ))
     (( elapsed >= ${POWERLINE_CMD_TIME_THRESHOLD:-2} )) && out="${elapsed}s"
     pl_timer_start=
 }
 
+# $1=bg escape, $2=fg escape, $3=content, $4=content fg (optional)
+pl_seg() {
+    PS1+="${pl_space_on:+${pl_symbol_part_next}${2}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${1}${pl_space_off:+${pl_symbol_part_next}}${4:-$pl_color_default} ${3} ${pl_color_reset}${2}"
+}
+
 pl_ps1() {
-    local last_cmd_result=$?
+    local last_cmd_result=$? first_content host_info git_info venv jobs_count cmd_time path_seg
+    local pl_space=${POWERLINE_SPACE-0}
+    local pl_space_off=${pl_space//[!0]/}
+    local pl_space_on=${pl_space//0/}
+    local first_seg_fg=$pl_color_path start_color first_seg_bg=$pl_color_bg_path first_content_fg=$pl_color_default
+
     [[ -n $pl_cmd_ran ]] && last_cmd_result=${last_cmd_result##0} || last_cmd_result=
     pl_cmd_ran=
-    local start_color=${pl_color_path} folder_color=${pl_color_icon}
-    local host_info git_info venv jobs_count cmd_time
-    local wd=${PWD/#${HOME}/\~}
-    local pl_space_on=${POWERLINE_SPACE-0}
-    local pl_space_off=${pl_space_on//[!0]/}
-    pl_space_on=${pl_space_on//0/}
-    [[ -w $PWD ]] || folder_color=${pl_color_failure}
-
-    pl_path_truncate wd
-    [[ ${POWERLINE_CRUMBS} = 0 ]] || pl_crumbs wd
-    [[ ${POWERLINE_HOST}   = 0 ]] || pl_host_info start_color host_info
-    [[ ${POWERLINE_GIT}    = 0 ]] || pl_git_info git_info
-    pl_venv_info     venv
-    pl_jobs_info     jobs_count
+    pl_path_info path_seg
+    pl_venv_info venv
+    pl_jobs_info jobs_count
     pl_cmd_time_info cmd_time
-
-    PS1="${start_color}${pl_symbol_part_start}${host_info}${pl_color_bg_path} ${folder_color}${pl_symbol_folder}${pl_color_default} ${venv}${wd} ${pl_color_reset}${pl_color_path}"
-    [[ -n $git_info ]]        && pl_seg "$pl_color_bg_git"     "$pl_color_git"           "$git_info"
-    [[ -n $jobs_count ]]      && pl_seg "$pl_color_bg_host"    "$pl_color_host"          $'\uf013  '"$jobs_count"
-    [[ -n $cmd_time ]]        && pl_seg "$pl_color_bg_success" "$pl_color_success_dark"  $'\uf017  '"$cmd_time"
-    [[ -n $last_cmd_result ]] && pl_seg "$pl_color_bg_failure" "$pl_color_failure"       "$last_cmd_result"
+    pl_first_seg_info first_seg_bg first_seg_fg first_content first_content_fg "$path_seg" "$venv"
+    start_color=$first_seg_fg
+    [[ ${POWERLINE_HOST} = 0 ]] || pl_host_info start_color host_info "$first_seg_fg" "$first_seg_bg"
+    [[ ${POWERLINE_GIT}  = 0 ]] || pl_git_info git_info
+    PS1="${start_color}${pl_symbol_part_start}${host_info}${first_seg_bg} ${first_content_fg}${first_content} ${pl_color_reset}${first_seg_fg}"
+    [[ -n $venv              ]] && pl_seg "$pl_color_bg_path"    "$pl_color_path"          "$path_seg"
+    [[ -n $git_info          ]] && pl_seg "$pl_color_bg_git"     "$pl_color_git"           "$git_info"
+    [[ -n $jobs_count        ]] && pl_seg "$pl_color_bg_host"    "$pl_color_host"          $'\uf013  '"$jobs_count"
+    [[ -n $cmd_time          ]] && pl_seg "$pl_color_bg_success" "$pl_color_success_dark"  $'\uf017  '"$cmd_time"
+    [[ -n $last_cmd_result   ]] && pl_seg "$pl_color_bg_failure" "$pl_color_failure"       "$last_cmd_result"
     PS1+="${pl_symbol_part_end}${pl_color_reset}"
 }
 
 # bail out in non-interactive shells (works whether sourced or executed)
 tty -s || return 2>/dev/null || exit
-
 powerline_set_ps1
 unset powerline_set_ps1
