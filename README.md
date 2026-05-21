@@ -3,7 +3,7 @@
 Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 
 
-![bash-powerline-ng](https://raw.github.com/z4ziggy/bash-powerline-ng/master/screenshots/terminal.png)
+![bash-powerline-ng](https://raw.github.com/z4ziggy/bash-powerline-ng/main/screenshots/terminal.png)
 
 ## Features
 
@@ -19,15 +19,20 @@ Minimalist, lightweight, usable and themable Powerline in pure Bash script.
 
 ## Installation
 
-Download the script and source it from your `.bashrc`:
+Clone the repo and source `bash-powerline-ng` into your `.bashrc`:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/z4ziggy/bash-powerline-ng/main/bash-powerline-ng.sh -o ~/.bash-powerline-ng.sh
-echo 'source ~/.bash-powerline-ng.sh' >> ~/.bashrc
+git clone https://github.com/z4ziggy/bash-powerline-ng.git
+cd bash-powerline-ng
+echo "source $PWD/bash-powerline-ng.sh" >> ~/.bashrc
 ```
 
-Override settings before sourcing, for example:
+You can use the `configure.sh` script to select theme, colors or change settings:
+
+![configure](https://raw.github.com/z4ziggy/bash-powerline-ng/main/screenshots/configure.png)
+
+Or manually override settings before sourcing, for example:
 ```bash
-POWERLINE_THEME=slant source ~/.bash-powerline-ng.sh
+POWERLINE_THEME=slant source $PWD/bash-powerline-ng.sh
 ```
 
 ## Why
@@ -35,4 +40,5 @@ POWERLINE_THEME=slant source ~/.bash-powerline-ng.sh
 Because [bash-powerline](https://github.com/riobard/bash-powerline) is great, but I wanted it to look nicer.
 
 ---
-_I'd tell you a UDP joke, but you probably wouldn't get it._
+_Q. How did the first program die?_
+_A. It was executed._
