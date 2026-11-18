@@ -36,7 +36,7 @@ declare -A pl_themes=(
       [round]=" |🖧 | |  ||| "
       [mixed]=" |🖧 | |  ||| "
 )
-# list of color schemes and their colors (#RRGGBB, or X11 names if showrgb is installed; space separated):
+# list of color schemes and their colors (#RRGGBB, space separated):
 # host_fg/bg  venv_fg/bg  path_fg/bg  git_fg/bg  jobs_fg/bg  time_fg/bg  fail_fg/bg  icon  crumb
 declare -A pl_colors=(
       [default]="#D3D3D3/#4682B4 #5C5C5C/#FFA54F #D3D3D3/#5C5C5C #00EE76/#383838 #D3D3D3/#4682B4 #D3D3D3/#008B45 #D3D3D3/#8B0000 #00BFFF #383838"
@@ -77,25 +77,14 @@ pl_set_theme() {
     POWERLINE_THEME=$1
 }
 
-# color -> "r;g;b" in REPLY: #RRGGBB, or an X11 name via showrgb (if installed; loaded once, on demand)
-declare -gA pl_rgb_map
+# #RRGGBB -> "r;g;b" in REPLY (empty if not hex)
 pl_rgb_resolve() {
-    REPLY=; [[ -z $1 ]] && return
-    if [[ $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]]; then
+    REPLY=
+    [[ $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]] &&
         REPLY="$((16#${BASH_REMATCH[1]}));$((16#${BASH_REMATCH[2]}));$((16#${BASH_REMATCH[3]}))"
-        return
-    fi
-    if [[ -z $pl_rgb_map_loaded ]]; then
-        pl_rgb_map_loaded=1
-        local r g b name extra
-        command -v showrgb &>/dev/null && while read -r r g b name extra; do
-            pl_rgb_map[$name${extra:+ $extra}]="$r;$g;$b"
-        done < <(showrgb)
-    fi
-    REPLY=${pl_rgb_map[$1]}
 }
 
-# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB; unresolved -> no escape
+# $1=out var, $2=38(fg)|48(bg), $3=#RRGGBB; invalid -> no escape
 pl_mkcolor()    { pl_rgb_resolve "$3"; declare -g $1="${REPLY:+\001\e[$2;2;${REPLY}m\002}"; }
 pl_rgb()        { pl_mkcolor "$1" 38 "$2"; }
 pl_rgb_bg()     { pl_mkcolor "$1" 48 "$2"; }
