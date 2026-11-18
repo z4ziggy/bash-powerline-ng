@@ -29,7 +29,7 @@ load_schema() {
 cycle_opt() {
     local v=${opt_vals[$1]}
     case ${opt_names[$1]} in
-        POWERLINE_PATH_MAX_LEN) case $v in 0) v=2;; 2) v=3;; 3) v=5;; *) v=0;; esac ;; POWERLINE_HOST_FORMAT) [[ $v == '\H' ]] && v='\h' || v='\H' ;; *) v=$((v ? 0 : 1)) ;;
+        POWERLINE_PATH_MAX_LEN) case $v in 0) v=2;; 2) v=3;; 3) v=5;; *) v=0;; esac ;; POWERLINE_HOST_FORMAT) case $v in '\H') v='\h';; '\h') v='\u@\h';; *) v='\H';; esac ;; *) v=$((v ? 0 : 1)) ;;
     esac
     opt_vals[$1]=$v; preview_key=
 }
@@ -63,11 +63,19 @@ draw_list(){
     done
 }
 
+# visible options; HOST_FORMAT is last in the script, so hiding it while HOST_SHOW is off just drops the tail
+opt_count(){
+    local i; REPLY=${#opt_names[@]}
+    for i in "${!opt_names[@]}"; do [[ ${opt_names[i]} == POWERLINE_HOST_SHOW && ${opt_vals[i]} == 0 ]] && ((REPLY--)); done
+}
+
 draw_options(){
     local i row ry vis=$((lh-5)) start=0 name v shown bg nfg vfg
     (( o_idx >= vis )) && start=$((o_idx-vis+1))
-    for ((i=0; i<vis && start+i<${#opt_names[@]}; i++)); do
+    opt_count
+    for ((i=0; i<vis; i++)); do
         row=$((start+i)); ry=$((ly+2+i))
+        (( row >= REPLY )) && { printf '\e[%s;%sH%s%*s' "$ry" "$((ox+1))" "$BG_PANEL" "$((ow-2))" ''; continue; }
         name=${opt_names[row]}; v=${opt_vals[row]}
         case $name in POWERLINE_PATH_MAX_LEN|POWERLINE_HOST_FORMAT) shown=$v ;; *) ((v)) && shown=ON || shown=OFF ;; esac
         bg=$BG_PANEL nfg=$C_TEXT vfg=$C_MUTED
@@ -123,6 +131,7 @@ full_redraw(){
 move_cur(){
     local arrs=(themes colors opt_names) idxs=(t_idx c_idx o_idx) n
     local -n a=${arrs[col]} i=${idxs[col]}; n=${#a[@]}
+    (( col == 2 )) && { opt_count; n=$REPLY; }
     ((n)) && i=$(( (i + n + $1) % n )); (( col != 2 )) && preview_key=
 }
 

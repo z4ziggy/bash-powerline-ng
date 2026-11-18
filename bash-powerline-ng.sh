@@ -13,15 +13,17 @@ POWERLINE_SPACE_SHOW=${POWERLINE_SPACE_SHOW:-1}         # show "crumb space" bet
 POWERLINE_GIT_SHOW=${POWERLINE_GIT_SHOW:-1}             # show git segment
 POWERLINE_GIT_CACHE_TTL=${POWERLINE_GIT_CACHE_TTL:-3}   # seconds; cache git status (0=off)
 POWERLINE_CRUMBS_SHOW=${POWERLINE_CRUMBS_SHOW:-1}       # show crumbs in path names
-POWERLINE_HOST_SHOW=${POWERLINE_HOST_SHOW:-0}           # show hostname segment
-POWERLINE_HOST_FORMAT=${POWERLINE_HOST_FORMAT:-\\H}     # \h or \H for short or full
 POWERLINE_VENV_SHOW=${POWERLINE_VENV_SHOW:-1}           # show python venv segment
 POWERLINE_JOBS_SHOW=${POWERLINE_JOBS_SHOW:-1}           # show background jobs segment
 POWERLINE_CMD_TIME_SHOW=${POWERLINE_CMD_TIME_SHOW:-1}   # show command execution time segment
 POWERLINE_CMD_TIME_THRESHOLD=${POWERLINE_CMD_TIME_THRESHOLD:-2}  # seconds; only show if >= this
 POWERLINE_PATH_MAX_LEN=${POWERLINE_PATH_MAX_LEN:-0}     # truncate path to N segments (0=unlimited)
+POWERLINE_HOST_SHOW=${POWERLINE_HOST_SHOW:-0}           # show hostname segment
+POWERLINE_HOST_FORMAT=${POWERLINE_HOST_FORMAT:-\\H}     # \h, \H or \u@\h: short, full, user@host
 POWERLINE_THEME=${POWERLINE_THEME:-default}             # default theme
 POWERLINE_COLORS=${POWERLINE_COLORS:-default}           # default color scheme
+# keep values passed as `VAR=x source ...`: bash drops such prefix assignments once source returns
+for _pl_v in ${!POWERLINE_*}; do declare -g "$_pl_v=${!_pl_v}"; done; unset _pl_v
 
 # list of themes and their symbols (separated by pipe '|') (spaces included):
 # HOST | NETWORK | FOLDER | CRUMB | PART_START | PART_NEXT | PART_END
@@ -34,19 +36,19 @@ declare -A pl_themes=(
       [round]=" |🖧 | |  ||| "
       [mixed]=" |🖧 | |  ||| "
 )
-# list of color schemes and their colors (tokens separated by space ' '):
+# list of color schemes and their colors (#RRGGBB, or X11 names if showrgb is installed; space separated):
 # host_fg/bg  venv_fg/bg  path_fg/bg  git_fg/bg  jobs_fg/bg  time_fg/bg  fail_fg/bg  icon  crumb
 declare -A pl_colors=(
-      [default]="LightGray/SteelBlue gray36/tan1 LightGray/gray36 SpringGreen2/gray22 LightGray/SteelBlue LightGray/SpringGreen4 LightGray/DarkRed DeepSkyBlue gray22"
-        [ocean]="gray95/DodgerBlue SteelBlue3/RoyalBlue4 gray95/SteelBlue3 #2050FB/LightCyan4 gray95/DodgerBlue gray95/DarkGreen gray95/red3 DodgerBlue3 RoyalBlue"
-         [nord]="white/LightSkyBlue3 LightSteelBlue3/DeepSkyBlue4 white/LightSteelBlue3 white/SkyBlue2 white/LightSkyBlue3 white/DarkSlateGray white/MediumPurple2 DeepSkyBlue3 gray80"
-       [sunset]="white/MediumOrchid4 PaleVioletRed3/SlateBlue3 white/PaleVioletRed3 white/sienna3 white/MediumOrchid4 white/firebrick4 white/red white orange"
-   [catppuccin]="gray20/LightSkyBlue2 LightPink1/IndianRed gray20/LightPink1 MediumSeaGreen/LightSteelBlue1 gray20/LightSkyBlue2 gray20/MediumSeaGreen gray20/red gray30 gray30"
-    [solarized]="black/orange violet/black black/violet white/cyan3 black/orange black/DarkGreen black/red magenta3 HotPink2"
-      [blueish]="MidnightBlue/DodgerBlue SteelBlue1/RoyalBlue4 MidnightBlue/SteelBlue1 MidnightBlue/DeepSkyBlue MidnightBlue/DodgerBlue MidnightBlue/SkyBlue1 MidnightBlue/red MidnightBlue MidnightBlue"
-       [forest]="yellow2/chartreuse3 DarkGreen/DarkSeaGreen2 yellow2/DarkGreen yellow/DarkOliveGreen4 yellow2/chartreuse3 yellow2/DarkOliveGreen yellow2/firebrick3 SpringGreen4 DarkOliveGreen2"
+      [default]="#D3D3D3/#4682B4 #5C5C5C/#FFA54F #D3D3D3/#5C5C5C #00EE76/#383838 #D3D3D3/#4682B4 #D3D3D3/#008B45 #D3D3D3/#8B0000 #00BFFF #383838"
+        [ocean]="#F2F2F2/#1E90FF #4F94CD/#27408B #F2F2F2/#4F94CD #2050FB/#7A8B8B #F2F2F2/#1E90FF #F2F2F2/#006400 #F2F2F2/#CD0000 #1874CD #4169E1"
+         [nord]="#FFFFFF/#8DB6CD #A2B5CD/#00688B #FFFFFF/#A2B5CD #FFFFFF/#7EC0EE #FFFFFF/#8DB6CD #FFFFFF/#2F4F4F #FFFFFF/#9F79EE #009ACD #CCCCCC"
+       [sunset]="#FFFFFF/#7A378B #CD6889/#6959CD #FFFFFF/#CD6889 #FFFFFF/#CD6839 #FFFFFF/#7A378B #FFFFFF/#8B1A1A #FFFFFF/#FF0000 #FFFFFF #FFA500"
+   [catppuccin]="#333333/#A4D3EE #FFAEB9/#CD5C5C #333333/#FFAEB9 #3CB371/#CAE1FF #333333/#A4D3EE #333333/#3CB371 #333333/#FF0000 #4D4D4D #4D4D4D"
+    [solarized]="#000000/#FFA500 #EE82EE/#000000 #000000/#EE82EE #FFFFFF/#00CDCD #000000/#FFA500 #000000/#006400 #000000/#FF0000 #CD00CD #EE6AA7"
+      [blueish]="#191970/#1E90FF #63B8FF/#27408B #191970/#63B8FF #191970/#00BFFF #191970/#1E90FF #191970/#87CEFF #191970/#FF0000 #191970 #191970"
+       [forest]="#EEEE00/#66CD00 #006400/#B4EEB4 #EEEE00/#006400 #FFFF00/#6E8B3D #EEEE00/#66CD00 #EEEE00/#556B2F #EEEE00/#CD2626 #008B45 #BCEE68"
         [earth]="#A8CC8C/#3E3A36 #4A4540/#E8A75D #A8CC8C/#4A4540 #A8CC8C/#35322E #A8CC8C/#3E3A36 #A8CC8C/#2D3A2D #A8CC8C/#CC6666 #D4C96B #6B6560"
-      [rainbow]="white/#2563EB #B45309/#FACC15 white/#B45309 white/#16A34A white/#2563EB white/#7C3AED white/#DC2626 #FBBF24 #F9A8D4"
+      [rainbow]="#FFFFFF/#2563EB #B45309/#FACC15 #FFFFFF/#B45309 #FFFFFF/#16A34A #FFFFFF/#2563EB #FFFFFF/#7C3AED #FFFFFF/#DC2626 #FBBF24 #F9A8D4"
 )
 
 # Nerd Font system icons keyed by $OSTYPE prefix
@@ -75,19 +77,26 @@ pl_set_theme() {
     POWERLINE_THEME=$1
 }
 
-# rgb name -> "r;g;b" lookup map; populated once from showrgb; hex #RRGGBB also works.
+# color -> "r;g;b" in REPLY: #RRGGBB, or an X11 name via showrgb (if installed; loaded once, on demand)
 declare -gA pl_rgb_map
 pl_rgb_resolve() {
     REPLY=; [[ -z $1 ]] && return
-    REPLY=${pl_rgb_map[$1]}
-    if [[ -z $REPLY && $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]]; then
+    if [[ $1 =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]]; then
         REPLY="$((16#${BASH_REMATCH[1]}));$((16#${BASH_REMATCH[2]}));$((16#${BASH_REMATCH[3]}))"
-        pl_rgb_map[$1]=$REPLY   # cache for next lookup
+        return
     fi
+    if [[ -z $pl_rgb_map_loaded ]]; then
+        pl_rgb_map_loaded=1
+        local r g b name extra
+        command -v showrgb &>/dev/null && while read -r r g b name extra; do
+            pl_rgb_map[$name${extra:+ $extra}]="$r;$g;$b"
+        done < <(showrgb)
+    fi
+    REPLY=${pl_rgb_map[$1]}
 }
 
-# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB
-pl_mkcolor()    { pl_rgb_resolve "$3"; declare -g $1="\001\e[$2;2;${REPLY}m\002"; }
+# $1=out var, $2=38(fg)|48(bg), $3=color name or #RRGGBB; unresolved -> no escape
+pl_mkcolor()    { pl_rgb_resolve "$3"; declare -g $1="${REPLY:+\001\e[$2;2;${REPLY}m\002}"; }
 pl_rgb()        { pl_mkcolor "$1" 38 "$2"; }
 pl_rgb_bg()     { pl_mkcolor "$1" 48 "$2"; }
 pl_color_pair() { pl_rgb "pl_color_$1" "$2"; pl_rgb_bg "pl_color_bg_$1" "$2"; }
@@ -99,13 +108,6 @@ pl_widget_pair() {
     pl_rgb    "pl_color_edge_$1" "$bg"
 }
 pl_set_colors() {
-    if [[ ${#pl_rgb_map[@]} -eq 0 ]] && command -v showrgb &>/dev/null; then
-        local r g b color_name extra
-        while read -r r g b color_name extra; do
-            color_name+=${extra:+ ${extra}}
-            pl_rgb_map["${color_name}"]="$r;$g;$b"
-        done < <(showrgb)
-    fi
     local colors
     read -a colors <<< "${pl_colors[$1]}"
     pl_widget_pair host             ${colors[0]}
@@ -166,7 +168,7 @@ pl_host_info() {
     local -n start=$1 info=$2
     local next_fg=${3:-$pl_color_edge_path} next_bg=${4:-$pl_color_bg_path}
     # cached host_info; rebuilt only when any input changes
-    local key="${POWERLINE_THEME}:${POWERLINE_COLORS}:${POWERLINE_SPACE_SHOW-0}:${SSH_CONNECTION}:${POWERLINE_HOST_FORMAT}:${next_fg}:${next_bg}"
+    local key="${POWERLINE_THEME}:${POWERLINE_COLORS}:${pl_space}:${SSH_CONNECTION}:${POWERLINE_HOST_FORMAT:-\\H}:${next_fg}:${next_bg}"
     if [[ $key != $pl_host_cache_key ]]; then
         # pick system icon: SSH > OS match > theme default
         local sys=${pl_symbol_host} k
@@ -178,7 +180,7 @@ pl_host_info() {
         local bg=${pl_color_bg_host} fg=${pl_color_edge_host} text=${pl_color_host}
         (( EUID == 0 )) && { bg=${pl_color_bg_fail}; fg=${pl_color_edge_fail}; text=${pl_color_fail}; }
         pl_host_cache_start=${fg}
-        pl_host_cache_info="${bg} ${text}${sys} ${POWERLINE_HOST_FORMAT} ${pl_space_on:+${pl_color_reset}${fg}${pl_symbol_part_next}${next_fg}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${pl_space_off:+${next_bg}${fg}${pl_symbol_part_next}}"
+        pl_host_cache_info="${bg} ${text}${sys} ${POWERLINE_HOST_FORMAT:-\\H} ${pl_space_on:+${pl_color_reset}${fg}${pl_symbol_part_next}${next_fg}${pl_color_invert}${pl_symbol_part_next}${pl_color_reset}}${pl_space_off:+${next_bg}${fg}${pl_symbol_part_next}}"
         pl_host_cache_key=$key
     fi
     start=$pl_host_cache_start
@@ -195,7 +197,7 @@ pl_path_info() {
         local -a parts=($wd)
         (( ${#parts[@]} <= max )) || wd="${parts[0]}/…/${parts[*]: -max+1}"
     fi
-    if [[ ${POWERLINE_CRUMBS_SHOW} != 0 && ${#wd} != 1 ]]; then
+    if [[ ${POWERLINE_CRUMBS_SHOW:-1} != 0 && ${#wd} != 1 ]]; then
         wd=${wd//\//${pl_crumb_symbol}}
         [[ ${wd:0:1} == "~" ]] || wd=/$wd
     fi
@@ -205,7 +207,7 @@ pl_path_info() {
 pl_venv_info() {
     local -n out=$1; out=
     local env=${VIRTUAL_ENV:-${CONDA_DEFAULT_ENV}}
-    [[ ${POWERLINE_VENV_SHOW} = 0 || -z $env ]] || out=${env##*/}
+    [[ ${POWERLINE_VENV_SHOW:-1} = 0 || -z $env ]] || out=${env##*/}
 }
 
 # choose the first visible segment: path by default, venv when active
@@ -234,7 +236,7 @@ pl_cmd_time_info() {
     local now elapsed d h m s
     printf -v now '%(%s)T' -1
     elapsed=$(( now - pl_timer_start ))
-    (( elapsed >= POWERLINE_CMD_TIME_THRESHOLD )) || { pl_timer_start=; return; }
+    (( elapsed >= ${POWERLINE_CMD_TIME_THRESHOLD:-2} )) || { pl_timer_start=; return; }
     (( d = elapsed / 86400, h = elapsed % 86400 / 3600, m = elapsed % 3600 / 60, s = elapsed % 60 ))
     (( d )) && out+="${d}d"; (( h )) && out+="${h}h"; (( m )) && out+="${m}m"
     (( s )) && out+="${s}s"; [[ -z $out ]] && out="0s"
@@ -248,16 +250,22 @@ pl_seg() {
 
 pl_ps1() {
     local last_cmd_result=$? first_content host_info git_info venv jobs_count cmd_time path_seg
-    local pl_space=${POWERLINE_SPACE_SHOW-0}
+    local pl_space=${POWERLINE_SPACE_SHOW:-1}
     local pl_space_off=${pl_space//[!0]/}
     local pl_space_on=${pl_space//0/}
     local first_seg_fg=$pl_color_edge_path start_color first_seg_bg=$pl_color_bg_path first_content_fg=$pl_color_path
 
+    # readline assumes the prompt starts at column 0. Pad a full line of spaces: after output
+    # lacking a final newline they wrap to a fresh line, otherwise \r returns to column 0.
+    local pad
+    printf -v pad '%*s' "${COLUMNS:-80}" ''
+    printf '\e[0m%s\r' "$pad" >&2
+
     # Collect independent segments.
-    [[ ${POWERLINE_VENV_SHOW}     = 0 ]] || pl_venv_info venv
-    [[ ${POWERLINE_GIT_SHOW}      = 0 ]] || pl_git_info git_info
-    [[ ${POWERLINE_JOBS_SHOW}     = 0 ]] || pl_jobs_info jobs_count
-    [[ ${POWERLINE_CMD_TIME_SHOW} = 0 ]] || pl_cmd_time_info cmd_time
+    [[ ${POWERLINE_VENV_SHOW:-1}     = 0 ]] || pl_venv_info venv
+    [[ ${POWERLINE_GIT_SHOW:-1}      = 0 ]] || pl_git_info git_info
+    [[ ${POWERLINE_JOBS_SHOW:-1}     = 0 ]] || pl_jobs_info jobs_count
+    [[ ${POWERLINE_CMD_TIME_SHOW:-1} = 0 ]] || pl_cmd_time_info cmd_time
 
     [[ -n $pl_cmd_ran ]] && last_cmd_result=${last_cmd_result##0} || last_cmd_result=
     pl_cmd_ran=
@@ -268,7 +276,7 @@ pl_ps1() {
 
     # Host separators inherit the actual first-segment colors.
     start_color=$first_seg_fg
-    [[ ${POWERLINE_HOST_SHOW} = 0     ]] || pl_host_info start_color host_info "$first_seg_fg" "$first_seg_bg"
+    [[ ${POWERLINE_HOST_SHOW:-0} = 0 ]] || pl_host_info start_color host_info "$first_seg_fg" "$first_seg_bg"
 
     PS1="${start_color}${pl_symbol_part_start}${host_info}${first_seg_bg} ${first_content_fg}${first_content} ${pl_color_reset}${first_seg_fg}"
     [[ -n $venv              ]] && pl_seg "$pl_color_bg_path" "$pl_color_edge_path" "$path_seg"              "$pl_color_path"
